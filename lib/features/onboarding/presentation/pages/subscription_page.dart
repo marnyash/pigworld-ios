@@ -108,11 +108,23 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
       }
     } on DioException catch (error) {
       if (mounted) {
-        final message = error.response?.data is Map<String, dynamic>
-            ? (error.response?.data['message'] as String?)
-            : null;
+        final data = error.response?.data is Map
+            ? Map<String, dynamic>.from(error.response!.data as Map)
+            : <String, dynamic>{};
+        final message = (data['message'] ?? data['error'] ??
+                'Could not start M-Pesa payment.')
+            .toString();
+        final details = [
+          if (data['provider_code'] != null) 'Code ${data['provider_code']}',
+          if (data['reference'] != null) 'Reference ${data['reference']}',
+        ];
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message ?? 'Could not start M-Pesa payment.')),
+          SnackBar(
+            content: Text(
+              details.isEmpty ? message : '$message (${details.join(', ')})',
+            ),
+            duration: const Duration(seconds: 8),
+          ),
         );
       }
     } finally {
