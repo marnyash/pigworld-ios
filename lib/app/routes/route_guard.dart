@@ -9,6 +9,7 @@ abstract final class RouteGuard {
     '/splash',
     '/login',
     '/forgot-password',
+    '/otp-verification',
     '/session-expired',
     '/permissions',
     '/language',

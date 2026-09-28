@@ -8,4 +8,8 @@ void main() {
       expect(RouteGuard.isPublic('/farm-selection'), isTrue);
     },
   );
+
+  test('OTP verification is accessible before authentication completes', () {
+    expect(RouteGuard.isPublic('/otp-verification'), isTrue);
+  });
 }

@@ -52,17 +52,16 @@ class LoginPage extends ConsumerWidget {
                       );
                       return;
                     }
-                    final session = await ref.read(loginUseCaseProvider)(
+                    final challenge = await ref.read(loginUseCaseProvider)(
                       identifier,
                       password,
                       rememberMe: rememberMe,
                     );
-                    await ref
-                        .read(authServiceProvider)
-                        .setRememberMe(rememberMe);
-                    await ref.read(sessionManagerProvider).markActive();
-                    ref.read(authProvider.notifier).setSession(session);
-                    if (context.mounted) context.go(AppRoutes.home);
+                    if (context.mounted) {
+                      context.go(
+                        '${AppRoutes.otpVerification}?challengeId=${Uri.encodeComponent(challenge.id)}&destination=${Uri.encodeComponent(challenge.destination)}&rememberMe=$rememberMe',
+                      );
+                    }
                   },
                 ),
                 const SizedBox(height: 12),

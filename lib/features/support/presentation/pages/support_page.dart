@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimensions.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import 'support_chat_page.dart';
 
-class SupportPage extends StatefulWidget {
+class SupportPage extends ConsumerStatefulWidget {
   const SupportPage({super.key});
 
   @override
-  State<SupportPage> createState() => _SupportPageState();
+  ConsumerState<SupportPage> createState() => _SupportPageState();
 }
 
-class _SupportPageState extends State<SupportPage> {
+class _SupportPageState extends ConsumerState<SupportPage> {
   final subjectController = TextEditingController();
   final descriptionController = TextEditingController();
   String selectedCategory = 'General';
@@ -24,7 +27,7 @@ class _SupportPageState extends State<SupportPage> {
     super.dispose();
   }
 
-  void submitTicket() {
+  Future<void> submitTicket() async {
     if (subjectController.text.trim().isEmpty ||
         descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,6 +50,16 @@ class _SupportPageState extends State<SupportPage> {
     subjectController.clear();
     descriptionController.clear();
     setState(() => selectedCategory = 'General');
+  }
+
+  Future<void> _openLiveChat() async {
+    final farm = ref.read(authProvider).valueOrNull?.selectedFarm;
+    if (farm == null || !mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => SupportChatPage(farmId: farm.id),
+      ),
+    );
   }
 
   Future<void> _openContact(Uri uri, String service) async {
@@ -86,9 +99,7 @@ class _SupportPageState extends State<SupportPage> {
         // Quick Actions
         Text('Get Help Quickly', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: AppDimensions.spacingMedium),
-        _QuickActionsSection(
-          onOpenChat: () => _showMessage(context, 'Opening live chat...'),
-        ),
+        _QuickActionsSection(onOpenChat: _openLiveChat),
         const SizedBox(height: AppDimensions.spacingLarge),
 
         // Contact Options

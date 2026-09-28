@@ -21,6 +21,7 @@ abstract final class AppRoutes {
   static const splash = '/splash';
   static const login = '/login';
   static const forgotPassword = '/forgot-password';
+  static const otpVerification = '/otp-verification';
   static const farmSelection = '/farm-selection';
   static const farmManagement = '/farm-management';
   static const sessionExpired = '/session-expired';

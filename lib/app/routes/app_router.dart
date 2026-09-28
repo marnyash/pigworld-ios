@@ -18,6 +18,7 @@ import '../../features/support/presentation/pages/support_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/farm_selection_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/otp_verification_page.dart';
 import '../../features/auth/presentation/pages/session_expired_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/create_account_page.dart';
@@ -91,6 +92,14 @@ abstract final class AppRouter {
       GoRoute(
         path: AppRoutes.forgotPassword,
         builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.otpVerification,
+        builder: (context, state) => OtpVerificationPage(
+          challengeId: state.uri.queryParameters['challengeId'] ?? '',
+          destination: state.uri.queryParameters['destination'] ?? '',
+          rememberMe: state.uri.queryParameters['rememberMe'] == 'true',
+        ),
       ),
       GoRoute(
         path: AppRoutes.sessionExpired,

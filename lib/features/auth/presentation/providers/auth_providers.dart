@@ -9,6 +9,7 @@ import '../../../../security/session/session_manager.dart';
 import '../../data/datasource/auth_local_datasource_impl.dart';
 import '../../data/datasource/auth_remote_datasource_impl.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../../support/data/support_api.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/forgot_password.dart';
@@ -18,6 +19,7 @@ import '../../domain/usecases/logout.dart';
 import '../../domain/usecases/refresh_session.dart';
 import '../../domain/usecases/register.dart';
 import '../../domain/usecases/select_farm.dart';
+import '../../domain/usecases/verify_login_otp.dart';
 import 'auth_provider.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
@@ -64,6 +66,9 @@ final authRepositoryProvider = Provider<AuthRepository>(
 final loginUseCaseProvider = Provider(
   (ref) => Login(ref.watch(authRepositoryProvider)),
 );
+final verifyLoginOtpUseCaseProvider = Provider(
+  (ref) => VerifyLoginOtp(ref.watch(authRepositoryProvider)),
+);
 final loginWithGoogleUseCaseProvider = Provider(
   (ref) => LoginWithGoogle(ref.watch(authRepositoryProvider)),
 );
@@ -81,6 +86,9 @@ final selectFarmUseCaseProvider = Provider(
 );
 final forgotPasswordUseCaseProvider = Provider(
   (ref) => ForgotPassword(ref.watch(authRepositoryProvider)),
+);
+final supportApiProvider = Provider<SupportApi>(
+  (ref) => SupportApi(ref.watch(dioProvider)),
 );
 
 /// Restores a persisted session on cold start, refreshing it if the 12h session window has lapsed.

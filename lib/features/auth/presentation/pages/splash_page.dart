@@ -14,16 +14,25 @@ class SplashPage extends ConsumerStatefulWidget {
   ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends ConsumerState<SplashPage> {
+class _SplashPageState extends ConsumerState<SplashPage>
+    with SingleTickerProviderStateMixin {
   bool _navigated = false;
-  final bool _showMark = true;
+  final DateTime _startedAt = DateTime.now();
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 560),
+  );
+  late final Animation<double> _fade = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeOut,
+  );
+  late final Animation<double> _scale = Tween<double>(begin: 0.96, end: 1)
+      .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
   @override
   void initState() {
     super.initState();
-    // Let the router finish mounting before replacing the initial route.
-    // Navigating directly from initState can leave the Router with no page on
-    // some cold starts (most noticeably after the native splash disappears).
+    _controller.forward();
     WidgetsBinding.instance.addPostFrameCallback((_) => _navigate());
   }
 
@@ -33,90 +42,104 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     try {
       session = await ref.read(sessionRestoreProvider.future);
     } catch (_) {
-      // A corrupt/unavailable persisted session must not strand the user on a
-      // blank startup screen. Continue as signed out instead.
       ref.read(authProvider.notifier).clearSession();
     }
     if (!mounted) return;
     if (session != null) {
+      await _finishSplashTransition();
+      if (!mounted) return;
       _navigated = true;
       context.go(
         session.selectedFarm != null ? AppRoutes.home : AppRoutes.farmSelection,
       );
       return;
     }
+
     bool onboardingCompleted;
     try {
       onboardingCompleted = await ref.read(onboardingCompletedProvider.future);
     } catch (_) {
-      // Login is the safe fallback if the onboarding preference is unreadable.
       onboardingCompleted = true;
     }
+    if (!mounted) return;
+    await _finishSplashTransition();
     if (!mounted) return;
     _navigated = true;
     context.go(onboardingCompleted ? AppRoutes.login : AppRoutes.language);
   }
 
+  Future<void> _finishSplashTransition() async {
+    const minimumVisible = Duration(milliseconds: 560);
+    final remaining = minimumVisible - DateTime.now().difference(_startedAt);
+    if (remaining > Duration.zero) await Future<void>.delayed(remaining);
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Theme.of(context).colorScheme.primary,
-    body: Center(
-      child: AnimatedOpacity(
-        opacity: _showMark ? 1 : 0,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOut,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.pets,
-                size: 52,
-                color: Theme.of(context).colorScheme.onPrimary,
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: FadeTransition(
+          opacity: reduceMotion ? const AlwaysStoppedAnimation(1) : _fade,
+          child: ScaleTransition(
+            scale: reduceMotion ? const AlwaysStoppedAnimation(1) : _scale,
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/images/logo.jpeg',
+                    width: 240,
+                    height: 240,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Pig World Smart',
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'PIG WORLD SMART',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Smart Pig Farm Management',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: 104,
+                    child: LinearProgressIndicator(
+                      value: reduceMotion ? 0.45 : null,
+                      minHeight: 3,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Preparing your farm…',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            Image.asset('assets/images/logo.jpeg', width: 120, height: 120),
-            const SizedBox(height: 20),
-            Text(
-              'PIG WORLD SMART',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onPrimary,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Smart Pig Farm Management',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onPrimary.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Version 1.0.0',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onPrimary.withValues(alpha: 0.65),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Icon(
-              Icons.more_horiz,
-              color: Theme.of(context).colorScheme.onPrimary,
-            ),
-          ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

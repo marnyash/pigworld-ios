@@ -1,5 +1,6 @@
 import '../../../../security/authorization/roles.dart';
 import '../../domain/entities/farm.dart';
+import '../../domain/entities/login_challenge.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasource/auth_local_datasource.dart';
@@ -14,19 +15,27 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthLocalDataSource local;
 
   @override
-  Future<Session> login(
+  Future<LoginChallenge> login(
     String email,
     String password, {
     bool rememberMe = false,
   }) async {
-    final response = await remote.login(
+    final challenge = await remote.login(
       LoginRequest(
         identifier: email,
         password: password,
         rememberMe: rememberMe,
       ),
     );
-    final session = response.toEntity();
+    return LoginChallenge(
+      id: challenge.challengeId,
+      destination: challenge.destination,
+    );
+  }
+
+  @override
+  Future<Session> verifyLoginOtp(String challengeId, String code) async {
+    final session = (await remote.verifyLoginOtp(challengeId, code)).toEntity();
     await local.saveSession(session);
     return session;
   }
