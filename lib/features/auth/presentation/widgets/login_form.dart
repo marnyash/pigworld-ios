@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 
 class LoginForm extends StatefulWidget {
-  const LoginForm({required this.onSubmit, super.key});
+  const LoginForm({
+    required this.onSubmit,
+    this.canSubmit = true,
+    this.useOtp = false,
+    this.onOtpToggle,
+    this.onSendOtp,
+    super.key,
+  });
+
   final Future<void> Function(String email, String password, bool rememberMe)
   onSubmit;
+  final bool canSubmit;
+  final bool useOtp;
+  final VoidCallback? onOtpToggle;
+  final Future<void> Function(String email)? onSendOtp;
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -34,15 +46,18 @@ class _LoginFormState extends State<LoginForm> {
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(
             labelText: 'Email or phone number',
-            prefixIcon: Icon(Icons.person_outline),
+            prefixIcon: Icon(Icons.alternate_email),
           ),
           validator: (value) {
             final input = value?.trim() ?? '';
+            if (input.isEmpty) {
+              return 'Enter your email or phone number';
+            }
+
+            final validPhone = RegExp(r'^\+?[0-9\s-]{8,}$').hasMatch(input);
             final validEmail = RegExp(
               r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
             ).hasMatch(input);
-            final validPhone = RegExp(r'^\+?[0-9\s-]{8,}$').hasMatch(input);
-            if (input.isEmpty) return 'Enter your email or phone number';
             if (!validEmail && !validPhone) {
               return 'Enter a valid email or phone number';
             }
@@ -52,6 +67,7 @@ class _LoginFormState extends State<LoginForm> {
         const SizedBox(height: 16),
         TextFormField(
           controller: passwordController,
+          keyboardType: TextInputType.text,
           obscureText: !passwordVisible,
           decoration: InputDecoration(
             labelText: 'Password',
@@ -67,8 +83,13 @@ class _LoginFormState extends State<LoginForm> {
                   setState(() => passwordVisible = !passwordVisible),
             ),
           ),
-          validator: (value) =>
-              (value?.isEmpty ?? true) ? 'Enter your password' : null,
+          validator: (value) {
+            final input = value?.trim() ?? '';
+            if (input.isEmpty) {
+              return 'Enter your password';
+            }
+            return null;
+          },
         ),
         StatefulBuilder(
           builder: (context, setState) => CheckboxListTile(
@@ -79,7 +100,7 @@ class _LoginFormState extends State<LoginForm> {
         ),
         const SizedBox(height: 16),
         FilledButton(
-          onPressed: isLoading
+          onPressed: isLoading || !widget.canSubmit
               ? null
               : () async {
                   if (!(formKey.currentState?.validate() ?? false)) return;

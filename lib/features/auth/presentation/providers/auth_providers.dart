@@ -9,7 +9,6 @@ import '../../../../security/session/session_manager.dart';
 import '../../data/datasource/auth_local_datasource_impl.dart';
 import '../../data/datasource/auth_remote_datasource_impl.dart';
 import '../../data/repositories/auth_repository_impl.dart';
-import '../../../support/data/support_api.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/forgot_password.dart';
@@ -86,9 +85,6 @@ final selectFarmUseCaseProvider = Provider(
 );
 final forgotPasswordUseCaseProvider = Provider(
   (ref) => ForgotPassword(ref.watch(authRepositoryProvider)),
-);
-final supportApiProvider = Provider<SupportApi>(
-  (ref) => SupportApi(ref.watch(dioProvider)),
 );
 
 /// Restores a persisted session on cold start, refreshing it if the 12h session window has lapsed.

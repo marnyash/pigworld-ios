@@ -42,12 +42,19 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
         )
         .toList();
     return OnboardingScaffold(
+      topAction: TextButton(
+        onPressed: () async {
+          await ref.read(onboardingStorageProvider).markCompleted();
+          if (context.mounted) context.go(AppRoutes.createAccount);
+        },
+        child: const Text('Skip'),
+      ),
       body: OnboardingEntry(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 30, 24, 24),
           children: [
             const OnboardingHeader(
-              eyebrow: 'Step 1 of 4',
+              eyebrow: 'Step 1 of 4 · Language',
               title: 'Choose your language',
               subtitle:
                   'Pick the language that feels most natural. You can change it later.',

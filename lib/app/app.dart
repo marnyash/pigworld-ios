@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'routes/app_router.dart';
+import 'routes/app_routes.dart';
 import '../shared/providers/theme_provider.dart';
 import '../shared/providers/connectivity_provider.dart';
-import '../features/onboarding/presentation/providers/onboarding_provider.dart';
+import '../features/settings/presentation/providers/settings_providers.dart';
+import '../features/notifications/data/notifications_api.dart';
+import '../features/notifications/presentation/providers/notifications_provider.dart';
 import 'theme/app_theme.dart';
 
 class MyApp extends StatelessWidget {
@@ -22,30 +26,14 @@ class _AppRoot extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'Pig World Smart App',
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ref.watch(themeModeProvider),
       debugShowCheckedModeBanner: false,
-      locale: Locale(ref.watch(onboardingProvider).languageCode),
-      supportedLocales: const [
-        Locale('en'),
-        Locale('sw'),
-        Locale('fr'),
-        Locale('de'),
-        Locale('es'),
-        Locale('pt'),
-        Locale('ar'),
-        Locale('zh'),
-        Locale('hi'),
-        Locale('ru'),
-        Locale('ja'),
-        Locale('ko'),
-        Locale('tr'),
-        Locale('it'),
-        Locale('nl'),
-      ],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      locale: Locale(ref.watch(appLanguageProvider)),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       routerConfig: AppRouter.router,
       builder: (context, child) => _OfflineBannerOverlay(child: child),
     );
@@ -73,7 +61,7 @@ class _OfflineBannerOverlay extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Center(
                   child: Text(
-                    'No internet connection',
+                    AppLocalizations.of(context)!.noInternetConnection,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onError,
                       fontSize: 12,
@@ -83,9 +71,108 @@ class _OfflineBannerOverlay extends ConsumerWidget {
               ),
             ),
           ),
+        const _NotificationBanner(),
         Expanded(child: child ?? const SizedBox.shrink()),
       ],
     );
+  }
+}
+
+class _NotificationBanner extends ConsumerStatefulWidget {
+  const _NotificationBanner();
+
+  @override
+  ConsumerState<_NotificationBanner> createState() =>
+      _NotificationBannerState();
+}
+
+class _NotificationBannerState extends ConsumerState<_NotificationBanner> {
+  String? _dismissedNotificationId;
+
+  @override
+  Widget build(BuildContext context) {
+    final notification = ref
+        .watch(notificationsProvider)
+        .valueOrNull
+        ?.firstWhereOrNull((item) => !item.isRead);
+
+    if (notification == null || notification.id == _dismissedNotificationId) {
+      return const SizedBox.shrink();
+    }
+
+    final color = switch (notification.severity) {
+      'danger' => Colors.red,
+      'warning' => Colors.orange,
+      'success' => Colors.green,
+      _ => Theme.of(context).colorScheme.primary,
+    };
+
+    return Material(
+      color: color,
+      child: SafeArea(
+        bottom: false,
+        child: InkWell(
+          onTap: () => _openNotification(notification),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+            child: Row(
+              children: [
+                const Icon(Icons.notifications_active_outlined, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notification.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        notification.body,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: AppLocalizations.of(context)!.dismissNotificationBanner,
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => setState(
+                    () => _dismissedNotificationId = notification.id,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openNotification(FarmNotification notification) async {
+    try {
+      await ref
+          .read(notificationsProvider.notifier)
+          .markAsRead(notification.id);
+    } finally {
+      if (mounted) context.push(AppRoutes.notifications);
+    }
+  }
+}
+
+extension on Iterable<FarmNotification> {
+  FarmNotification? firstWhereOrNull(bool Function(FarmNotification) test) {
+    for (final item in this) {
+      if (test(item)) return item;
+    }
+    return null;
   }
 }
 

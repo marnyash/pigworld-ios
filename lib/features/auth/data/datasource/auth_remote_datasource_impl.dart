@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/errors/error_handler.dart';
-import '../models/login_challenge_response.dart';
 import '../models/login_request.dart';
+import '../models/login_challenge_response.dart';
 import '../models/login_response.dart';
 import '../models/register_request.dart';
 import 'auth_remote_datasource.dart';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../features/herd/presentation/pages/herd_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/breeding/presentation/pages/breeding_page.dart';
@@ -9,6 +10,7 @@ import '../../features/feed/presentation/pages/inventory_page.dart';
 import '../../features/growth/presentation/pages/growth_page.dart';
 import '../../features/finance/presentation/pages/finance_page.dart';
 import '../../features/sales/presentation/pages/sales_page.dart';
+import '../../features/tasks/presentation/pages/tasks_page.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/about/presentation/pages/about_page.dart';
 import '../../features/settings/presentation/pages/profile_page.dart';
@@ -26,6 +28,7 @@ import '../../features/onboarding/presentation/pages/country_page.dart';
 import '../../features/onboarding/presentation/pages/account_type_page.dart';
 import '../../features/onboarding/presentation/pages/herd_setup_page.dart';
 import '../../features/onboarding/presentation/pages/subscription_page.dart';
+import '../../features/onboarding/presentation/pages/payment_method_page.dart';
 import '../../features/onboarding/presentation/pages/language_page.dart';
 import '../../features/onboarding/presentation/pages/permissions_page.dart';
 import '../../features/subscription/presentation/pages/payment_status_page.dart';
@@ -82,6 +85,10 @@ abstract final class AppRouter {
         builder: (context, state) => const SubscriptionPage(),
       ),
       GoRoute(
+        path: AppRoutes.paymentMethod,
+        builder: (context, state) => PaymentMethodPage.fromExtra(state.extra),
+      ),
+      GoRoute(
         path: AppRoutes.paymentStatus,
         builder: (context, state) => PaymentStatusPage.fromExtra(state.extra),
       ),
@@ -95,11 +102,16 @@ abstract final class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.otpVerification,
-        builder: (context, state) => OtpVerificationPage(
-          challengeId: state.uri.queryParameters['challengeId'] ?? '',
-          destination: state.uri.queryParameters['destination'] ?? '',
-          rememberMe: state.uri.queryParameters['rememberMe'] == 'true',
-        ),
+        builder: (context, state) {
+          final challengeId = state.uri.queryParameters['challengeId'] ?? '';
+          final destination = state.uri.queryParameters['destination'] ?? '';
+          final rememberMe = state.uri.queryParameters['rememberMe'] == 'true';
+          return OtpVerificationPage(
+            challengeId: challengeId,
+            destination: destination,
+            rememberMe: rememberMe,
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.sessionExpired,
@@ -130,6 +142,10 @@ abstract final class AppRouter {
             builder: (context, state) => const FeedPage(),
           ),
           GoRoute(
+            path: AppRoutes.tasks,
+            builder: (context, state) => const TasksPage(),
+          ),
+          GoRoute(
             path: AppRoutes.finance,
             builder: (context, state) => const FinancePage(),
           ),
@@ -158,7 +174,7 @@ abstract final class AppRouter {
             builder: (context, state) => const ModulePage(
               title: 'Customers',
               description:
-                  'Customer relationship management now lives in the standalone CRM web app.',
+                  'Manage customer relationships from the Pig World Smart web dashboard.',
               icon: Icons.groups_outlined,
             ),
           ),
@@ -231,6 +247,7 @@ class _AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authProvider).valueOrNull;
+    final l10n = AppLocalizations.of(context)!;
     final user = session?.user;
     final farmName = session?.selectedFarm?.name ?? 'Pig World Smart';
     final initials = (user?.name.isNotEmpty ?? false)
@@ -282,76 +299,76 @@ class _AppDrawer extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(12, 14, 12, 20),
                 children: [
-                  const _DrawerSectionLabel('Farm management'),
+                  _DrawerSectionLabel(l10n.farmManagement),
                   _ListTile(
                     icon: Icons.home_outlined,
-                    title: 'Dashboard',
+                    title: l10n.dashboard,
                     route: AppRoutes.home,
                   ),
                   _ListTile(
                     icon: Icons.pets_outlined,
-                    title: 'Herd',
+                    title: l10n.herd,
                     route: AppRoutes.herd,
                   ),
                   _ListTile(
                     icon: Icons.restaurant_outlined,
-                    title: 'Feed',
+                    title: l10n.feed,
                     route: AppRoutes.feed,
                   ),
                   _ListTile(
                     icon: Icons.health_and_safety_outlined,
-                    title: 'Health',
+                    title: l10n.health,
                     route: AppRoutes.health,
                   ),
                   _ListTile(
                     icon: Icons.monitor_weight_outlined,
-                    title: 'Growth',
+                    title: l10n.growth,
                     route: AppRoutes.growth,
                   ),
                   _ListTile(
                     icon: Icons.inventory_2_outlined,
-                    title: 'Inventory',
+                    title: l10n.inventory,
                     route: AppRoutes.inventory,
                   ),
                   _ListTile(
                     icon: Icons.favorite_outline,
-                    title: 'Breeding',
+                    title: l10n.breeding,
                     route: AppRoutes.breeding,
                   ),
                   _ListTile(
                     icon: Icons.point_of_sale_outlined,
-                    title: 'Sales',
+                    title: l10n.sales,
                     route: AppRoutes.salesAndExpenses,
                   ),
-                  const _DrawerSectionLabel('Workspace'),
+                  _DrawerSectionLabel(l10n.workspace),
                   _ListTile(
                     icon: Icons.assessment_outlined,
-                    title: 'Reports',
+                    title: l10n.reports,
                     route: AppRoutes.reports,
                   ),
                   _ListTile(
                     icon: Icons.notifications_outlined,
-                    title: 'Notifications',
+                    title: l10n.notifications,
                     route: AppRoutes.notifications,
                   ),
                   _ListTile(
                     icon: Icons.support_agent_outlined,
-                    title: 'Customer Support',
+                    title: l10n.customerSupport,
                     route: AppRoutes.support,
                   ),
                   _ListTile(
                     icon: Icons.manage_accounts_outlined,
-                    title: 'My team',
+                    title: l10n.myTeam,
                     route: AppRoutes.farmManagement,
                   ),
                   _ListTile(
                     icon: Icons.settings_outlined,
-                    title: 'Settings',
+                    title: l10n.settings,
                     route: AppRoutes.settings,
                   ),
                   _ListTile(
                     icon: Icons.info_outline,
-                    title: 'About',
+                    title: l10n.about,
                     route: AppRoutes.about,
                   ),
                   const Padding(
@@ -359,6 +376,7 @@ class _AppDrawer extends ConsumerWidget {
                     child: Divider(),
                   ),
                   _LogoutTile(
+                    title: l10n.logout,
                     onLogout: () async {
                       await ref.read(logoutUseCaseProvider)();
                       ref.read(authProvider.notifier).clearSession();
@@ -438,9 +456,10 @@ class _DrawerSectionLabel extends StatelessWidget {
 }
 
 class _LogoutTile extends StatelessWidget {
-  const _LogoutTile({required this.onLogout});
+  const _LogoutTile({required this.onLogout, required this.title});
 
   final Future<void> Function() onLogout;
+  final String title;
 
   @override
   Widget build(BuildContext context) => ListTile(
@@ -448,7 +467,7 @@ class _LogoutTile extends StatelessWidget {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     tileColor: AppColors.danger.withValues(alpha: 0.06),
     leading: const Icon(Icons.logout, color: AppColors.danger),
-    title: const Text('Logout'),
+    title: Text(title),
     textColor: AppColors.danger,
     onTap: onLogout,
   );

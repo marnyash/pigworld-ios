@@ -9,9 +9,7 @@ class LoginChallengeResponse {
 
   factory LoginChallengeResponse.fromJson(Map<String, dynamic> json) {
     if (json['otp_required'] != true || json['challenge_id'] is! String) {
-      throw const FormatException(
-        'The login response did not include an OTP challenge.',
-      );
+      throw const FormatException('The login response did not include an OTP challenge.');
     }
 
     return LoginChallengeResponse(

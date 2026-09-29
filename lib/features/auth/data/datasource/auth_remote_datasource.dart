@@ -15,10 +15,10 @@ abstract interface class AuthRemoteDataSource {
 
 class UnconfiguredAuthRemoteDataSource implements AuthRemoteDataSource {
   @override
-  Future<LoginChallengeResponse> login(LoginRequest request) =>
+    Future<LoginChallengeResponse> login(LoginRequest request) =>
       throw UnimplementedError('Connect the Laravel API in the network layer.');
-  @override
-  Future<LoginResponse> verifyLoginOtp(String challengeId, String code) =>
+    @override
+    Future<LoginResponse> verifyLoginOtp(String challengeId, String code) =>
       throw UnimplementedError('Connect the Laravel API in the network layer.');
   @override
   Future<LoginResponse> loginWithGoogle(String idToken) =>

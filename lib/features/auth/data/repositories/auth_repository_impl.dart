@@ -27,10 +27,7 @@ class AuthRepositoryImpl implements AuthRepository {
         rememberMe: rememberMe,
       ),
     );
-    return LoginChallenge(
-      id: challenge.challengeId,
-      destination: challenge.destination,
-    );
+    return LoginChallenge(id: challenge.challengeId, destination: challenge.destination);
   }
 
   @override

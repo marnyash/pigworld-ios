@@ -35,13 +35,20 @@ class AccountTypePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedRoles = ref.watch(onboardingProvider).roles;
     return OnboardingScaffold(
+      topAction: TextButton(
+        onPressed: () async {
+          await ref.read(onboardingStorageProvider).markCompleted();
+          if (context.mounted) context.go(AppRoutes.createAccount);
+        },
+        child: const Text('Skip'),
+      ),
       body: OnboardingEntry(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
           children: [
             const OnboardingHeader(
               title: 'Choose your account type',
-              eyebrow: 'Step 3 of 4',
+              eyebrow: 'Step 3 of 4 · Account type',
               subtitle:
                   'Choose the role that best matches your work on the farm.',
             ),

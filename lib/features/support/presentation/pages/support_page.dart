@@ -7,15 +7,17 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimensions.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import 'support_chat_page.dart';
+import '../../../notifications/data/notifications_api.dart';
+import '../../../notifications/presentation/providers/notifications_provider.dart';
 
-class SupportPage extends ConsumerStatefulWidget {
+class SupportPage extends StatefulWidget {
   const SupportPage({super.key});
 
   @override
-  ConsumerState<SupportPage> createState() => _SupportPageState();
+  State<SupportPage> createState() => _SupportPageState();
 }
 
-class _SupportPageState extends ConsumerState<SupportPage> {
+class _SupportPageState extends State<SupportPage> {
   final subjectController = TextEditingController();
   final descriptionController = TextEditingController();
   String selectedCategory = 'General';
@@ -27,7 +29,7 @@ class _SupportPageState extends ConsumerState<SupportPage> {
     super.dispose();
   }
 
-  Future<void> submitTicket() async {
+  void submitTicket() {
     if (subjectController.text.trim().isEmpty ||
         descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,19 +54,20 @@ class _SupportPageState extends ConsumerState<SupportPage> {
     setState(() => selectedCategory = 'General');
   }
 
-  Future<void> _openLiveChat() async {
-    final farm = ref.read(authProvider).valueOrNull?.selectedFarm;
-    if (farm == null || !mounted) return;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => SupportChatPage(farmId: farm.id),
-      ),
-    );
-  }
-
   Future<void> _openContact(Uri uri, String service) async {
-    if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    if (!await canLaunchUrl(uri)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('This device cannot open $service.')),
+      );
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
     if (!mounted) return;
+    if (launched) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Could not open $service on this device.')),
     );
@@ -73,152 +76,388 @@ class _SupportPageState extends ConsumerState<SupportPage> {
   Future<void> callVeterinary() =>
       _openContact(Uri.parse('tel:+254705030550'), 'the phone app');
 
+  void _openLiveChat(WidgetRef ref) {
+    final farmId = ref.read(authProvider).valueOrNull?.selectedFarm?.id;
+    if (farmId == null) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => SupportChatPage(farmId: farmId)),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Customer Support'),
-      leading: IconButton(
-        tooltip: 'Back to home',
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.go(AppRoutes.home),
-      ),
-      centerTitle: true,
-    ),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimensions.pagePadding,
-        AppDimensions.pagePadding,
-        AppDimensions.pagePadding,
-        32,
-      ),
-      children: [
-        // Support Header
-        _SupportHeader(),
-        const SizedBox(height: AppDimensions.spacingLarge),
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final notifications =
+            ref.watch(notificationsProvider).valueOrNull ??
+            const <FarmNotification>[];
+        final crmMessage = notifications.cast<FarmNotification?>().firstWhere(
+          (notification) => notification?.type == 'crm_message',
+          orElse: () => null,
+        );
+        final customerCareName = crmMessage?.title.trim().isNotEmpty == true
+            ? crmMessage!.title.trim()
+            : 'Customer Care';
 
-        // Quick Actions
-        Text('Get Help Quickly', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppDimensions.spacingMedium),
-        _QuickActionsSection(onOpenChat: _openLiveChat),
-        const SizedBox(height: AppDimensions.spacingLarge),
-
-        // Contact Options
-        Text('Contact Options', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppDimensions.spacingMedium),
-        _ContactOptionsSection(onOpenContact: _openContact),
-        const SizedBox(height: AppDimensions.spacingLarge),
-
-        // Emergency Veterinary Help
-        _EmergencyVeterinaryCard(onCall: callVeterinary),
-        const SizedBox(height: AppDimensions.spacingLarge),
-
-        // FAQ Section
-        Text(
-          'Frequently Asked Questions',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: AppDimensions.spacingMedium),
-        _FAQSection(),
-        const SizedBox(height: AppDimensions.spacingLarge),
-
-        // Submit a Ticket
-        Text('Submit a Ticket', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppDimensions.spacingMedium),
-        _TicketSubmissionForm(
-          subjectController: subjectController,
-          descriptionController: descriptionController,
-          selectedCategory: selectedCategory,
-          onCategoryChanged: (value) {
-            setState(() => selectedCategory = value ?? 'General');
-          },
-          onSubmit: submitTicket,
-        ),
-        const SizedBox(height: AppDimensions.spacingLarge),
-
-        // User Guide
-        Text(
-          'User Guide & Tutorials',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: AppDimensions.spacingMedium),
-        _UserGuideSection(),
-      ],
-    ),
-  );
-}
-
-// Support Header Widget
-class _SupportHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Card(
-    color: AppColors.deepGreen,
-    child: Padding(
-      padding: const EdgeInsets.all(AppDimensions.spacingLarge),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: AppColors.inverseText.withValues(alpha: 0.18),
-                child: const Icon(
-                  Icons.support_agent_outlined,
-                  color: AppColors.inverseText,
-                  size: 28,
+        return Scaffold(
+          endDrawer: _SupportDrawer(
+            onOpenLiveChat: () => _openLiveChat(ref),
+            onOpenContact: _openContact,
+            onCall: callVeterinary,
+          ),
+          appBar: AppBar(
+            title: const Text('Customer Support'),
+            leading: IconButton(
+              tooltip: 'Back to home',
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.go(AppRoutes.home),
+            ),
+            actions: [
+              Builder(
+                builder: (context) => IconButton(
+                  tooltip: 'Guidance and contacts',
+                  icon: const Icon(Icons.menu_open),
+                  onPressed: () => Scaffold.of(context).openEndDrawer(),
                 ),
               ),
-              const SizedBox(width: AppDimensions.spacingMedium),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'We\'re Here to Help',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppColors.inverseText,
-                      ),
+            ],
+            centerTitle: true,
+          ),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.pagePadding,
+              AppDimensions.pagePadding,
+              AppDimensions.pagePadding,
+              32,
+            ),
+            children: [
+              _SupportHeader(
+                customerCareName: customerCareName,
+                onEmergencyCall: callVeterinary,
+              ),
+              const SizedBox(height: AppDimensions.spacingLarge),
+              Text('Live chat', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: AppDimensions.spacingMedium),
+              _LiveChatPreview(
+                customerCareName: customerCareName,
+                message: crmMessage?.body,
+                onOpenChat: () => _openLiveChat(ref),
+              ),
+              const SizedBox(height: AppDimensions.spacingLarge),
+              Text(
+                'Contact Options',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppDimensions.spacingMedium),
+              _ContactOptionsSection(onOpenContact: _openContact),
+              const SizedBox(height: AppDimensions.spacingLarge),
+              _EmergencyVeterinaryCard(onCall: callVeterinary),
+              const SizedBox(height: AppDimensions.spacingLarge),
+              Text(
+                'Frequently Asked Questions',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppDimensions.spacingMedium),
+              _FAQSection(),
+              const SizedBox(height: AppDimensions.spacingLarge),
+              Text(
+                'Submit a Ticket',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppDimensions.spacingMedium),
+              _TicketSubmissionForm(
+                subjectController: subjectController,
+                descriptionController: descriptionController,
+                selectedCategory: selectedCategory,
+                onCategoryChanged: (value) {
+                  setState(() => selectedCategory = value ?? 'General');
+                },
+                onSubmit: submitTicket,
+              ),
+              const SizedBox(height: AppDimensions.spacingLarge),
+              Text(
+                'User Guide & Tutorials',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppDimensions.spacingMedium),
+              _UserGuideSection(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LiveChatPage extends ConsumerStatefulWidget {
+  const _LiveChatPage();
+
+  @override
+  ConsumerState<_LiveChatPage> createState() => _LiveChatPageState();
+}
+
+class _LiveChatPageState extends ConsumerState<_LiveChatPage> {
+  final _messageController = TextEditingController();
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter a message before sending it to Customer Care.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSending = true);
+    try {
+      await ref.read(notificationsProvider.notifier).sendMessage(text);
+      if (!mounted) return;
+      _messageController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message sent to Customer Care.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not send message: $error')));
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notifications =
+        ref.watch(notificationsProvider).valueOrNull ??
+        const <FarmNotification>[];
+    final messages =
+        notifications
+            .where(
+              (notification) =>
+                  notification.type == 'crm_message' ||
+                  notification.type == 'crm_message_sent',
+            )
+            .toList()
+          ..sort((left, right) => left.createdAt.compareTo(right.createdAt));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: AppColors.primaryGreen,
+              child: Icon(Icons.support_agent, color: Colors.white, size: 19),
+            ),
+            SizedBox(width: 10),
+            Text('Customer Care'),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Close chat',
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE7F6EC),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
+                    child: const Row(
                       children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: AppColors.success,
-                            shape: BoxShape.circle,
+                        CircleAvatar(
+                          backgroundColor: AppColors.primaryGreen,
+                          child: Icon(Icons.support_agent, color: Colors.white),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Customer Care is online. Please leave a message and our team will reply as soon as possible.',
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Online',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.inverseMutedText),
-                        ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  if (messages.isEmpty)
+                    const _ChatBubble(
+                      text: 'How can we help with your farm today?',
+                      fromCustomerCare: true,
+                    )
+                  else
+                    ...messages.map(
+                      (message) => _ChatBubble(
+                        text: message.body,
+                        fromCustomerCare: message.type == 'crm_message',
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Material(
+              color: Theme.of(context).colorScheme.surface,
+              elevation: 8,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        minLines: 1,
+                        maxLines: 5,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(
+                          hintText: 'Type a message',
+                          filled: true,
+                          fillColor: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      tooltip: 'Send message',
+                      onPressed: _isSending ? null : _sendMessage,
+                      icon: const Icon(Icons.send),
                     ),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatBubble extends StatelessWidget {
+  const _ChatBubble({required this.text, required this.fromCustomerCare});
+
+  final String text;
+  final bool fromCustomerCare;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: fromCustomerCare ? Alignment.centerLeft : Alignment.centerRight,
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: fromCustomerCare ? const Color(0xFFF0F0F0) : AppColors.deepGreen,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: fromCustomerCare ? null : Colors.white),
+      ),
+    ),
+  );
+}
+
+class _SupportDrawer extends StatelessWidget {
+  const _SupportDrawer({
+    required this.onOpenLiveChat,
+    required this.onOpenContact,
+    required this.onCall,
+  });
+
+  final VoidCallback onOpenLiveChat;
+  final Future<void> Function(Uri uri, String service) onOpenContact;
+  final Future<void> Function() onCall;
+
+  @override
+  Widget build(BuildContext context) => Drawer(
+    child: SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.support_agent_outlined,
+                size: 28,
+                color: AppColors.primaryGreen,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Support Center',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: AppDimensions.spacingMedium),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.spacingMedium,
-              vertical: AppDimensions.spacingSmall,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.inverseText.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppDimensions.radius),
-            ),
-            child: Text(
-              '⏱️ Average response time: 2-4 hours',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.inverseText),
-            ),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.chat_bubble_outline),
+            title: const Text('Open live chat'),
+            onTap: () {
+              Navigator.of(context).pop();
+              onOpenLiveChat();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.phone_outlined),
+            title: const Text('Call support'),
+            onTap: () async {
+              Navigator.of(context).pop();
+              await onOpenContact(
+                Uri.parse('tel:+254705030550'),
+                'the phone app',
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.local_hospital_outlined),
+            title: const Text('Vet emergency'),
+            onTap: () async {
+              Navigator.of(context).pop();
+              await onCall();
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.help_outline),
+            title: const Text('FAQ'),
+            onTap: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Open the FAQ section below.')),
+              );
+            },
           ),
         ],
       ),
@@ -226,74 +465,229 @@ class _SupportHeader extends StatelessWidget {
   );
 }
 
-// Quick Actions Section
-class _QuickActionsSection extends StatelessWidget {
-  final VoidCallback onOpenChat;
-
-  const _QuickActionsSection({required this.onOpenChat});
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: _ActionCard(
-          icon: Icons.chat_bubble_outline,
-          label: 'Live Chat',
-          onTap: onOpenChat,
-        ),
-      ),
-      const SizedBox(width: AppDimensions.spacingMedium),
-      Expanded(
-        child: _ActionCard(
-          icon: Icons.help_outline,
-          label: 'FAQ',
-          onTap: () {},
-        ),
-      ),
-      const SizedBox(width: AppDimensions.spacingMedium),
-      Expanded(
-        child: _ActionCard(
-          icon: Icons.video_library_outlined,
-          label: 'Tutorials',
-          onTap: () {},
-        ),
-      ),
-    ],
-  );
-}
-
-// Action Card Widget
-class _ActionCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionCard({
-    required this.icon,
-    required this.label,
-    required this.onTap,
+class _LiveChatPreview extends StatelessWidget {
+  const _LiveChatPreview({
+    required this.customerCareName,
+    required this.message,
+    required this.onOpenChat,
   });
+
+  final String customerCareName;
+  final String? message;
+  final VoidCallback onOpenChat;
 
   @override
   Widget build(BuildContext context) => Card(
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppDimensions.radius),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-        child: Column(
-          children: [
-            Icon(icon, color: AppColors.primaryGreen, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-          ],
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      children: [
+        Container(
+          color: const Color(0xFFE7F6EC),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+          child: Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: AppColors.primaryGreen,
+                child: Icon(Icons.support_agent, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      customerCareName,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'Customer Care · online',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.verified, color: AppColors.primaryGreen),
+            ],
+          ),
+        ),
+        Container(
+          color: const Color(0xFFF3FBF5),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                      topRight: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                    ),
+                  ),
+                  child: Text('Hi there! We\'re here to help with your farm.'),
+                ),
+              ),
+              if (message != null && message!.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.all(Radius.circular(16)),
+                    ),
+                    child: Text(message!),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onOpenChat,
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: const Text('Continue live chat'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// Support Header Widget
+class _SupportHeader extends StatelessWidget {
+  const _SupportHeader({
+    required this.customerCareName,
+    required this.onEmergencyCall,
+  });
+
+  final String customerCareName;
+  final VoidCallback onEmergencyCall;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      Card(
+        color: AppColors.deepGreen,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppDimensions.spacingLarge,
+            AppDimensions.spacingLarge,
+            88,
+            AppDimensions.spacingLarge,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppColors.inverseText.withValues(
+                      alpha: 0.18,
+                    ),
+                    child: const Icon(
+                      Icons.support_agent_outlined,
+                      color: AppColors.inverseText,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: AppDimensions.spacingMedium),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'We\'re here to help',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(color: AppColors.inverseText),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: AppColors.success,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Online',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.inverseMutedText),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          customerCareName,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColors.inverseText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppDimensions.spacingMedium),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.spacingMedium,
+                  vertical: AppDimensions.spacingSmall,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.inverseText.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppDimensions.radius),
+                ),
+                child: Text(
+                  'Average response time: 2-4 hours',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.inverseText),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
+      Positioned(
+        right: 18,
+        bottom: 18,
+        child: FloatingActionButton(
+          heroTag: 'support-emergency-vet',
+          mini: true,
+          backgroundColor: AppColors.danger,
+          foregroundColor: AppColors.inverseText,
+          tooltip: 'Call emergency vet',
+          onPressed: onEmergencyCall,
+          child: const Icon(Icons.phone_in_talk_outlined),
+        ),
+      ),
+    ],
   );
 }
 

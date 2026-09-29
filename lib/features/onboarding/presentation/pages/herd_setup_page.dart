@@ -88,13 +88,21 @@ class _HerdSetupPageState extends ConsumerState<HerdSetupPage> {
 
   @override
   Widget build(BuildContext context) => OnboardingScaffold(
+    topAction: TextButton(
+      onPressed: () async {
+        await ref.read(onboardingStorageProvider).markCompleted();
+        if (!context.mounted) return;
+        context.go(AppRoutes.createAccount);
+      },
+      child: const Text('Skip'),
+    ),
     progress: (_step + 1) / 3,
     body: OnboardingEntry(
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           OnboardingHeader(
-            eyebrow: 'Farm setup • Step ${_step + 1} of 3',
+            eyebrow: 'Step 4 of 4 · Farm setup • ${_step + 1} of 3',
             title: _step == 0
                 ? 'Start with your herd'
                 : _step == 1
