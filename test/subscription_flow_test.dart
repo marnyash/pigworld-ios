@@ -69,6 +69,7 @@ void main() {
             Response(
               data: {
                 'payment': {
+                  'status': 'pending',
                   'merchant_request_id': 'MR123',
                   'checkout_request_id': 'QC123',
                   'result_description':

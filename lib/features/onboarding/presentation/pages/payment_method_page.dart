@@ -124,6 +124,22 @@ class _PaymentMethodPageState extends ConsumerState<PaymentMethodPage> {
 
       if (!mounted) return;
 
+      final checkoutRequestId =
+          payment['checkout_request_id']?.toString().trim() ?? '';
+      if (payment['status'] != 'pending' || checkoutRequestId.isEmpty) {
+        final detail = payment['result_description']?.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              detail == null || detail.isEmpty
+                  ? 'Safaricom did not confirm that an M-Pesa prompt was sent. Please try again.'
+                  : 'M-Pesa prompt was not confirmed: $detail',
+            ),
+          ),
+        );
+        return;
+      }
+
       final resultDescription =
           (payment['result_description'] ??
                   'M-Pesa prompt sent. Check your phone and enter your PIN.')
@@ -136,7 +152,7 @@ class _PaymentMethodPageState extends ConsumerState<PaymentMethodPage> {
           'currency': currency,
           'payment_method': _selectedMethod,
           'merchant_request_id': payment['merchant_request_id'] ?? '',
-          'checkout_request_id': payment['checkout_request_id'] ?? '',
+          'checkout_request_id': checkoutRequestId,
           'result_description': resultDescription,
         },
       );

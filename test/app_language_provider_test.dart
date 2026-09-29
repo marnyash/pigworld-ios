@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:proj/features/settings/data/settings_local_data_source.dart';
 import 'package:proj/features/settings/domain/entities/user_preferences.dart';
 import 'package:proj/features/settings/presentation/providers/settings_providers.dart';
+import 'package:proj/features/onboarding/presentation/pages/language_page.dart';
 import 'package:proj/l10n/generated/app_localizations.dart';
 
 void main() {
@@ -80,6 +81,41 @@ void main() {
     await container.read(userPreferencesProvider.notifier).updateLanguage('sw');
     await tester.pumpAndSettle();
     expect(find.text('Mipangilio'), findsOneWidget);
+  });
+
+  testWidgets('onboarding language choice is saved and changes its visible UI', (
+    tester,
+  ) async {
+    final storage = _MemorySettingsDataSource(UserPreferences.defaults());
+    final container = ProviderContainer(
+      overrides: [settingsLocalDataSourceProvider.overrideWithValue(storage)],
+    );
+    addTearDown(container.dispose);
+    await container.read(userPreferencesProvider.future);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: Consumer(
+          builder: (context, ref, _) => MaterialApp(
+            locale: Locale(ref.watch(appLanguageProvider)),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const LanguagePage(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Choose your language'), findsOneWidget);
+
+    await tester.tap(find.text('Kiswahili'));
+    await tester.pumpAndSettle();
+
+    expect(storage.preferences.language, 'sw');
+    expect(container.read(appLanguageProvider), 'sw');
+    expect(find.text('Chagua lugha yako'), findsOneWidget);
+    expect(find.text('Français'), findsNothing);
   });
 }
 
