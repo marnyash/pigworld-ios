@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/components/bottom_navigation.dart';
 import '../../data/feed_api.dart';
+import '../../data/feed_schedule_local_data_source.dart';
 import '../providers/feed_provider.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 
 class FeedPage extends ConsumerStatefulWidget {
   const FeedPage({super.key});
@@ -14,15 +16,12 @@ class FeedPage extends ConsumerStatefulWidget {
 }
 
 class _FeedPageState extends ConsumerState<FeedPage> {
-  final Map<String, bool> _schedule = {
-    'Morning': true,
-    'Afternoon': false,
-    'Evening': false,
-  };
-
   @override
   Widget build(BuildContext context) {
     final feed = ref.watch(feedProvider);
+    final schedule = ref.watch(feedScheduleProvider);
+    final currency =
+        ref.watch(userPreferencesProvider).valueOrNull?.currency ?? 'KES';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Feed Management'),
@@ -60,13 +59,27 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         ),
         data: (snapshot) => _Dashboard(
           snapshot: snapshot,
-          schedule: _schedule,
-          onScheduleChanged: (name, value) {
-            setState(() => _schedule[name] = value);
-            if (value) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$name feeding marked complete')),
-              );
+          schedule:
+              schedule.valueOrNull ?? FeedScheduleLocalDataSource.defaults,
+          currency: currency,
+          onScheduleChanged: (name, value) async {
+            try {
+              await ref
+                  .read(feedScheduleProvider.notifier)
+                  .setCompleted(name, value);
+              if (value && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$name feeding marked complete')),
+                );
+              }
+            } catch (_) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not save the feeding checklist.'),
+                  ),
+                );
+              }
             }
           },
           onAddFeed: _showAddStockDialog,
@@ -86,6 +99,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   Future<void> _showAddStockDialog() async {
     final name = TextEditingController();
     final quantity = TextEditingController();
+    final cost = TextEditingController();
     String unit = 'kg';
     try {
       await showDialog<void>(
@@ -109,6 +123,16 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                 decoration: const InputDecoration(labelText: 'Quantity'),
               ),
               const SizedBox(height: 12),
+              TextField(
+                controller: cost,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Unit cost (optional)',
+                ),
+              ),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: unit,
                 decoration: const InputDecoration(labelText: 'Unit'),
@@ -128,7 +152,23 @@ class _FeedPageState extends ConsumerState<FeedPage> {
             FilledButton(
               onPressed: () async {
                 final amount = double.tryParse(quantity.text) ?? 0;
-                if (name.text.trim().isEmpty || amount <= 0) return;
+                final costText = cost.text.trim();
+                final unitCost = costText.isEmpty
+                    ? null
+                    : double.tryParse(costText);
+                if (name.text.trim().isEmpty ||
+                    amount <= 0 ||
+                    (costText.isNotEmpty &&
+                        (unitCost == null || unitCost < 0))) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Enter a feed name, a quantity greater than zero, and a valid non-negative unit cost.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
                 try {
                   await ref
                       .read(feedProvider.notifier)
@@ -136,6 +176,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                         name: name.text.trim(),
                         quantity: amount,
                         unit: unit,
+                        unitCost: unitCost,
                       );
                   if (dialogContext.mounted) Navigator.pop(dialogContext);
                 } catch (error) {
@@ -154,6 +195,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
     } finally {
       name.dispose();
       quantity.dispose();
+      cost.dispose();
     }
   }
 
@@ -283,6 +325,7 @@ class _Dashboard extends StatelessWidget {
   const _Dashboard({
     required this.snapshot,
     required this.schedule,
+    required this.currency,
     required this.onScheduleChanged,
     required this.onAddFeed,
     required this.onRecord,
@@ -290,6 +333,7 @@ class _Dashboard extends StatelessWidget {
   });
   final FeedSnapshot snapshot;
   final Map<String, bool> schedule;
+  final String currency;
   final void Function(String, bool) onScheduleChanged;
   final VoidCallback onAddFeed, onRecord, onOrder;
 
@@ -337,10 +381,14 @@ class _Dashboard extends StatelessWidget {
               Icons.warning_amber_rounded,
               AppColors.warning,
             ),
-            const _Metric(
+            _Metric(
               'Monthly feed cost',
-              '—',
-              'record costs to track',
+              snapshot.hasMonthlyFeedCost
+                  ? '$currency ${snapshot.monthlyFeedCost.toStringAsFixed(2)}'
+                  : '—',
+              snapshot.hasMonthlyFeedCost
+                  ? 'since the start of this month'
+                  : 'add unit costs to feed stock',
               Icons.payments_rounded,
               AppColors.violet,
             ),
@@ -824,31 +872,6 @@ class _AnalyticsCard extends StatelessWidget {
                     ),
                 ],
               ),
-            ),
-            const SizedBox(height: 14),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(
-                  Icons.trending_up_rounded,
-                  size: 18,
-                  color: AppColors.violet,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Feed cost trend',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ),
-                Text(
-                  'Awaiting cost data',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(color: AppColors.mutedText),
-                ),
-              ],
             ),
           ],
         ),

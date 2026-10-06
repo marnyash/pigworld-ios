@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../providers/auth_provider.dart';
 import '../providers/auth_providers.dart';
+import '../services/apple_sign_in_service.dart';
 import '../services/google_sign_in_service.dart';
 import '../widgets/login_form.dart';
 import '../widgets/server_settings_dialog.dart';
@@ -133,13 +134,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   onPressed: !_agreementAccepted
                       ? null
                       : defaultTargetPlatform == TargetPlatform.iOS
-                      ? () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Continue with Apple is coming soon.',
-                            ),
-                          ),
-                        )
+                      ? _signInWithApple
                       : () async {
                           try {
                             final idToken = await GoogleSignInService()
@@ -215,6 +210,35 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ),
     ),
   );
+
+  Future<void> _signInWithApple() async {
+    try {
+      final idToken = await AppleSignInService().signIn();
+      final session = await ref.read(loginWithAppleUseCaseProvider)(idToken);
+      await ref.read(authServiceProvider).setRememberMe(true);
+      await ref.read(sessionManagerProvider).markActive();
+      ref.read(authProvider.notifier).setSession(session);
+      if (mounted) context.go(AppRoutes.home);
+    } on AppleSignInConfigurationException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } on AppleSignInCancelledException {
+      return;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Apple sign-in failed. Check the iOS capability and Firebase Apple provider settings, then try again.',
+            ),
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _showAgreement(BuildContext context, String title) async {
     await showDialog<void>(

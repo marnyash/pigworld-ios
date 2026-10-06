@@ -5,8 +5,10 @@ import '../models/register_request.dart';
 
 abstract interface class AuthRemoteDataSource {
   Future<LoginChallengeResponse> login(LoginRequest request);
+  Future<LoginChallengeResponse> resendLoginOtp(String challengeId);
   Future<LoginResponse> verifyLoginOtp(String challengeId, String code);
   Future<LoginResponse> loginWithGoogle(String idToken);
+  Future<LoginResponse> loginWithApple(String idToken);
   Future<LoginResponse> register(RegisterRequest request);
   Future<LoginResponse> refresh(String refreshToken);
   Future<void> logout(String accessToken);
@@ -15,13 +17,19 @@ abstract interface class AuthRemoteDataSource {
 
 class UnconfiguredAuthRemoteDataSource implements AuthRemoteDataSource {
   @override
-    Future<LoginChallengeResponse> login(LoginRequest request) =>
+  Future<LoginChallengeResponse> login(LoginRequest request) =>
       throw UnimplementedError('Connect the Laravel API in the network layer.');
-    @override
-    Future<LoginResponse> verifyLoginOtp(String challengeId, String code) =>
+  @override
+  Future<LoginChallengeResponse> resendLoginOtp(String challengeId) =>
+      throw UnimplementedError('Connect the Laravel API in the network layer.');
+  @override
+  Future<LoginResponse> verifyLoginOtp(String challengeId, String code) =>
       throw UnimplementedError('Connect the Laravel API in the network layer.');
   @override
   Future<LoginResponse> loginWithGoogle(String idToken) =>
+      throw UnimplementedError('Connect the Laravel API in the network layer.');
+  @override
+  Future<LoginResponse> loginWithApple(String idToken) =>
       throw UnimplementedError('Connect the Laravel API in the network layer.');
   @override
   Future<LoginResponse> register(RegisterRequest request) =>

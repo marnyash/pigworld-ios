@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class FarmLocationSelection {
   const FarmLocationSelection({
@@ -32,12 +33,11 @@ class FarmLocationPickerDialog extends StatefulWidget {
 }
 
 class _FarmLocationPickerDialogState extends State<FarmLocationPickerDialog> {
-  static const _defaultLatitude = -1.286389;
-  static const _defaultLongitude = 36.817223;
+  static const _defaultPosition = LatLng(-1.286389, 36.817223);
   final _geocoding = Geocoding();
 
-  late double _latitude;
-  late double _longitude;
+  late LatLng _selected;
+  GoogleMapController? _controller;
   late final TextEditingController _searchController;
   String _address = '';
   bool _resolvingAddress = false;
@@ -46,8 +46,10 @@ class _FarmLocationPickerDialogState extends State<FarmLocationPickerDialog> {
   @override
   void initState() {
     super.initState();
-    _latitude = widget.initialLatitude ?? _defaultLatitude;
-    _longitude = widget.initialLongitude ?? _defaultLongitude;
+    _selected =
+        widget.initialLatitude != null && widget.initialLongitude != null
+        ? LatLng(widget.initialLatitude!, widget.initialLongitude!)
+        : _defaultPosition;
     _address = widget.initialAddress ?? '';
     _searchController = TextEditingController(text: _address);
   }
@@ -59,105 +61,127 @@ class _FarmLocationPickerDialogState extends State<FarmLocationPickerDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Set farm location'),
-    content: SizedBox(
-      width: 620,
-      height: MediaQuery.sizeOf(context).height * .62,
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Set farm location'),
+      leading: IconButton(
+        tooltip: 'Cancel',
+        onPressed: () => Navigator.pop(context),
+        icon: const Icon(Icons.close),
+      ),
+    ),
+    body: SafeArea(
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (_) => _searchAddress(),
-                  decoration: InputDecoration(
-                    hintText: 'Search address or place',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: IconButton(
-                      tooltip: 'Search map',
-                      onPressed: _searching ? null : _searchAddress,
-                      icon: _searching
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.arrow_forward),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _searchAddress(),
+                    decoration: InputDecoration(
+                      hintText: 'Search address or place',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        tooltip: 'Search map',
+                        onPressed: _searching ? null : _searchAddress,
+                        icon: _searching
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.arrow_forward),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                tooltip: 'Use current location',
-                onPressed: _useCurrentLocation,
-                icon: const Icon(Icons.my_location),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.location_on_outlined, size: 44),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Choose a place by searching for its address or using your current location.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  SelectableText(
-                    '${_latitude.toStringAsFixed(6)}, ${_longitude.toStringAsFixed(6)}',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                ],
-              ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: 'Use current location',
+                  onPressed: _useCurrentLocation,
+                  icon: const Icon(Icons.my_location),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.place_outlined, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _resolvingAddress
-                      ? 'Finding address…'
-                      : _address.isEmpty
-                      ? 'Tap the map to choose the farm location'
-                      : _address,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+          Expanded(
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: _selected,
+                zoom: 14,
+              ),
+              onMapCreated: (controller) => _controller = controller,
+              onTap: _selectPoint,
+              markers: {
+                Marker(
+                  markerId: const MarkerId('farm-location'),
+                  position: _selected,
+                  draggable: true,
+                  onDragEnd: _selectPoint,
+                ),
+              },
+              myLocationButtonEnabled: false,
+              mapToolbarEnabled: false,
+              compassEnabled: true,
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant,
                 ),
               ),
-            ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.place_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _resolvingAddress
+                            ? 'Finding address…'
+                            : _address.isEmpty
+                            ? 'Pinned location: ${_coordinateLabel()}'
+                            : _address,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_resolvingAddress)
+                      const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _resolvingAddress ? null : _save,
+                    icon: const Icon(Icons.check),
+                    label: const Text('Save location'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
-      ),
-      FilledButton.icon(
-        onPressed: _address.trim().isEmpty ? null : _save,
-        icon: const Icon(Icons.check),
-        label: const Text('Save location'),
-      ),
-    ],
   );
 
   Future<void> _searchAddress() async {
@@ -168,9 +192,10 @@ class _FarmLocationPickerDialogState extends State<FarmLocationPickerDialog> {
       final matches = await _geocoding.locationFromAddress(query);
       if (matches.isEmpty) throw const FormatException('No location found.');
       final match = matches.first;
-          await _setCoordinates(match.latitude, match.longitude);
+      await _select(LatLng(match.latitude, match.longitude));
     } catch (_) {
-      if (mounted) _message('Could not find that place. Try a more specific address.');
+      if (mounted)
+        _message('Could not find that place. Try a more specific address.');
     } finally {
       if (mounted) setState(() => _searching = false);
     }
@@ -187,25 +212,30 @@ class _FarmLocationPickerDialogState extends State<FarmLocationPickerDialog> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        throw StateError('Location permission is needed to use your current location.');
+        throw StateError(
+          'Location permission is needed to use your current location.',
+        );
       }
       final position = await Geolocator.getCurrentPosition();
-      await _setCoordinates(position.latitude, position.longitude);
+      await _select(LatLng(position.latitude, position.longitude));
     } catch (error) {
       if (mounted) _message(error.toString().replaceFirst('Bad state: ', ''));
     }
   }
 
-  Future<void> _setCoordinates(double latitude, double longitude) async {
+  Future<void> _selectPoint(LatLng point) => _select(point);
+
+  Future<void> _select(LatLng point) async {
     setState(() {
-      _latitude = latitude;
-      _longitude = longitude;
+      _selected = point;
+      _address = '';
       _resolvingAddress = true;
     });
+    await _controller?.animateCamera(CameraUpdate.newLatLngZoom(point, 15));
     try {
       final placemarks = await _geocoding.placemarkFromCoordinates(
-        latitude,
-        longitude,
+        point.latitude,
+        point.longitude,
       );
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
@@ -215,7 +245,7 @@ class _FarmLocationPickerDialogState extends State<FarmLocationPickerDialog> {
           place.locality,
           place.administrativeArea,
           place.country,
-        ].whereType<String>().where((part) => part.trim().isNotEmpty).join(', ');
+        ].where((part) => part?.trim().isNotEmpty == true).join(', ');
         if (address.isNotEmpty) _searchController.text = address;
         if (mounted) setState(() => _address = address);
       }
@@ -229,11 +259,14 @@ class _FarmLocationPickerDialogState extends State<FarmLocationPickerDialog> {
   void _save() => Navigator.pop(
     context,
     FarmLocationSelection(
-      address: _address.trim(),
-      latitude: _latitude,
-      longitude: _longitude,
+      address: _address.trim().isEmpty ? _coordinateLabel() : _address.trim(),
+      latitude: _selected.latitude,
+      longitude: _selected.longitude,
     ),
   );
+
+  String _coordinateLabel() =>
+      '${_selected.latitude.toStringAsFixed(5)}, ${_selected.longitude.toStringAsFixed(5)}';
 
   void _message(String value) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
