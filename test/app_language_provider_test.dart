@@ -109,7 +109,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Choose your language'), findsOneWidget);
 
-    await tester.tap(find.text('Kiswahili'));
+    await tester.tap(find.text('Kiswahili').first);
     await tester.pumpAndSettle();
 
     expect(storage.preferences.language, 'sw');
