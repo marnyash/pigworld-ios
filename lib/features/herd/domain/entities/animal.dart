@@ -7,6 +7,7 @@ class Animal {
     required this.status,
     this.birthDate,
     this.notes,
+    this.imageUrl,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class Animal {
   final String status;
   final DateTime? birthDate;
   final String? notes;
+  final String? imageUrl;
 
   factory Animal.fromJson(Map<String, dynamic> json) => Animal(
     id: '${json['id']}',
@@ -27,5 +29,6 @@ class Animal {
         ? null
         : DateTime.tryParse('${json['birth_date']}'),
     notes: json['notes'] as String?,
+    imageUrl: json['image_url'] as String?,
   );
 }

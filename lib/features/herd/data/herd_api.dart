@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../../../core/errors/error_handler.dart';
@@ -22,23 +24,40 @@ class HerdApi {
     }
   }
 
-  Future<Animal> createSow({
+  Future<Animal> createAnimal({
     required String farmId,
     required String tag,
+    required String type,
+    required String sex,
     DateTime? birthDate,
     String? notes,
+    Uint8List? imageBytes,
+    String? imageName,
   }) async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/farms/$farmId/animals',
-        data: {
-          'tag': tag,
-          'type': 'sow',
-          'sex': 'female',
-          'birth_date': ?birthDate?.toIso8601String().split('T').first,
-          if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
-        },
-      );
+      final data = {
+        'tag': tag,
+        'type': type,
+        'sex': sex,
+        'birth_date': ?birthDate?.toIso8601String().split('T').first,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      };
+      final response = imageBytes == null
+          ? await _dio.post<Map<String, dynamic>>(
+              '/farms/$farmId/animals',
+              data: data,
+            )
+          : await _dio.post<Map<String, dynamic>>(
+              '/farms/$farmId/animals',
+              data: FormData.fromMap({
+                ...data,
+                'image': MultipartFile.fromBytes(
+                  imageBytes,
+                  filename: imageName ?? 'animal.jpg',
+                ),
+              }),
+              options: Options(contentType: 'multipart/form-data'),
+            );
       return Animal.fromJson(response.data?['data'] as Map<String, dynamic>);
     } on DioException catch (error) {
       throw ErrorHandler.from(error);

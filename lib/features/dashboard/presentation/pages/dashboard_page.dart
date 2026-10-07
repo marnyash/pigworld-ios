@@ -15,6 +15,7 @@ import '../../../notifications/presentation/providers/notifications_provider.dar
 import '../../../notifications/data/notifications_api.dart';
 import '../../../health/presentation/providers/health_providers.dart';
 import '../../../../shared/components/bottom_navigation.dart';
+import '../../../settings/presentation/providers/farm_access_provider.dart';
 import '../providers/farm_overview_provider.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
@@ -47,8 +48,22 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final session = ref.watch(authProvider).valueOrNull;
+    final role = session?.user.role;
+    final access = ref.watch(farmAccessProvider);
+    final permissions =
+        access.valueOrNull?.permissionsFor(session?.user.id ?? '') ??
+        (access.isLoading ? RolePermissions.all[role] ?? const {} : const {});
+    bool allows(AppPermission permission) =>
+        role == UserRole.farmOwner ||
+        role == UserRole.superAdmin ||
+        permissions.contains(permission);
+    final canViewOverview =
+        allows(AppPermission.manageHerd) ||
+        allows(AppPermission.manageFeed) ||
+        allows(AppPermission.viewTasks) ||
+        allows(AppPermission.viewSales);
     final farmId = session?.selectedFarm?.id;
-    final overview = farmId == null
+    final overview = farmId == null || !canViewOverview
         ? const AsyncValue<Map<String, dynamic>>.data({})
         : ref.watch(farmOverviewProvider(farmId));
     final firstName = session?.user.name.split(' ').first ?? 'there';
@@ -60,14 +75,17 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         : liveHerdCount.toInt() > registeredHerdCount
         ? liveHerdCount.toInt()
         : registeredHerdCount;
-    final role = session?.user.role;
-    final isAdmin = role == UserRole.farmOwner;
-    final healthOverview = ref.watch(healthOverviewProvider);
+    final healthOverview = allows(AppPermission.manageHerd)
+        ? ref.watch(healthOverviewProvider)
+        : const AsyncValue<Map<String, dynamic>>.data({});
     final pregnantCount = session?.selectedFarm?.pregnantPigCount ?? 0;
     final vaccinatedCount = healthOverview.valueOrNull?['vaccinated'] ?? 0;
     final notifications =
         ref.watch(notificationsProvider).valueOrNull ??
         const <FarmNotification>[];
+    final unreadNotificationCount = notifications
+        .where((notification) => !notification.isRead)
+        .length;
     FarmNotification? crmMessage;
     for (final notification in notifications) {
       if (notification.type == 'crm_message') {
@@ -75,6 +93,36 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         break;
       }
     }
+    final statCards = <Widget>[
+      if (allows(AppPermission.manageHerd))
+        _StatCard(
+          icon: Icons.pets_outlined,
+          label: l10n.herdSize,
+          value: '$herdCount',
+          color: AppColors.primaryGreen,
+        ),
+      if (allows(AppPermission.manageFeed))
+        _StatCard(
+          icon: Icons.grass_outlined,
+          label: l10n.feedStock,
+          value: overview.valueOrNull?['feed_stock']?.toString() ?? '—',
+          color: AppColors.warning,
+        ),
+      if (allows(AppPermission.viewTasks))
+        _StatCard(
+          icon: Icons.checklist_outlined,
+          label: l10n.tasksDue,
+          value: overview.valueOrNull?['tasks_due']?.toString() ?? '—',
+          color: AppColors.danger,
+        ),
+      if (allows(AppPermission.viewSales))
+        _StatCard(
+          icon: Icons.point_of_sale_outlined,
+          label: l10n.salesThisWeek,
+          value: overview.valueOrNull?['sales_this_week']?.toString() ?? '—',
+          color: AppColors.deepGreen,
+        ),
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -85,9 +133,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ),
         title: Text(farmName, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
-          IconButton(
+          _NotificationAction(
+            unreadCount: unreadNotificationCount,
             tooltip: l10n.openNotifications,
-            icon: const Icon(Icons.notifications_outlined),
             onPressed: () => context.go(AppRoutes.notifications),
           ),
         ],
@@ -199,53 +247,26 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   ),
                 ],
                 const SizedBox(height: AppDimensions.spacingLarge),
-                _HerdStatusCard(
-                  pregnant: pregnantCount,
-                  vaccinated: vaccinatedCount,
-                  active: herdCount,
-                ),
-                const SizedBox(height: AppDimensions.spacingLarge),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: AppDimensions.spacingMedium,
-                  crossAxisSpacing: AppDimensions.spacingMedium,
-                  childAspectRatio: 1.0,
-                  children: [
-                    _StatCard(
-                      icon: Icons.pets_outlined,
-                      label: l10n.herdSize,
-                      value: '$herdCount',
-                      color: AppColors.primaryGreen,
-                    ),
-                    _StatCard(
-                      icon: Icons.grass_outlined,
-                      label: l10n.feedStock,
-                      value:
-                          overview.valueOrNull?['feed_stock']?.toString() ??
-                          '—',
-                      color: AppColors.warning,
-                    ),
-                    _StatCard(
-                      icon: Icons.checklist_outlined,
-                      label: l10n.tasksDue,
-                      value:
-                          overview.valueOrNull?['tasks_due']?.toString() ?? '—',
-                      color: AppColors.danger,
-                    ),
-                    _StatCard(
-                      icon: Icons.point_of_sale_outlined,
-                      label: l10n.salesThisWeek,
-                      value:
-                          overview.valueOrNull?['sales_this_week']
-                              ?.toString() ??
-                          '—',
-                      color: AppColors.deepGreen,
-                    ),
-                  ],
-                ),
-                if (registeredHerdCount > 0) ...[
+                if (allows(AppPermission.manageHerd)) ...[
+                  _HerdStatusCard(
+                    pregnant: pregnantCount,
+                    vaccinated: vaccinatedCount,
+                    active: herdCount,
+                  ),
+                  const SizedBox(height: AppDimensions.spacingLarge),
+                ],
+                if (statCards.isNotEmpty)
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: AppDimensions.spacingMedium,
+                    crossAxisSpacing: AppDimensions.spacingMedium,
+                    childAspectRatio: 1.0,
+                    children: statCards,
+                  ),
+                if (allows(AppPermission.manageHerd) &&
+                    registeredHerdCount > 0) ...[
                   const SizedBox(height: AppDimensions.spacingMedium),
                   _RegisteredHerdBanner(
                     motherPigs: session?.selectedFarm?.motherPigCount ?? 0,
@@ -260,42 +281,35 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   spacing: AppDimensions.spacingMedium,
                   runSpacing: AppDimensions.spacingMedium,
                   children: [
-                    _QuickAction(
-                      icon: Icons.pets_outlined,
-                      label: l10n.herd,
-                      color: AppColors.pigPink,
-                      onTap: () => context.go(AppRoutes.herd),
-                    ),
-                    _QuickAction(
-                      icon: Icons.grass_outlined,
-                      label: l10n.feed,
-                      color: AppColors.leaf,
-                      onTap: () => context.go(AppRoutes.feed),
-                    ),
-                    _QuickAction(
-                      icon: Icons.check_circle_outline,
-                      label: l10n.tasks,
-                      color: AppColors.warmGold,
-                      onTap: () => context.go(AppRoutes.tasks),
-                    ),
-                    if (isAdmin ||
-                        (role != null &&
-                            RolePermissions.can(
-                              role,
-                              AppPermission.manageFinance,
-                            )))
+                    if (allows(AppPermission.manageHerd))
+                      _QuickAction(
+                        icon: Icons.pets_outlined,
+                        label: l10n.herd,
+                        color: AppColors.pigPink,
+                        onTap: () => context.go(AppRoutes.herd),
+                      ),
+                    if (allows(AppPermission.manageFeed))
+                      _QuickAction(
+                        icon: Icons.grass_outlined,
+                        label: l10n.feed,
+                        color: AppColors.leaf,
+                        onTap: () => context.go(AppRoutes.feed),
+                      ),
+                    if (allows(AppPermission.viewTasks))
+                      _QuickAction(
+                        icon: Icons.check_circle_outline,
+                        label: l10n.tasks,
+                        color: AppColors.warmGold,
+                        onTap: () => context.go(AppRoutes.tasks),
+                      ),
+                    if (allows(AppPermission.manageFinance))
                       _QuickAction(
                         icon: Icons.account_balance_wallet_outlined,
                         label: l10n.finance,
                         color: AppColors.warmGold,
                         onTap: () => context.go(AppRoutes.finance),
                       ),
-                    if (isAdmin ||
-                        (role != null &&
-                            RolePermissions.can(
-                              role,
-                              AppPermission.manageSales,
-                            )))
+                    if (allows(AppPermission.manageSales))
                       _QuickAction(
                         icon: Icons.groups_outlined,
                         label: l10n.customers,
@@ -308,7 +322,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       color: AppColors.violet,
                       onTap: () => context.go(AppRoutes.support),
                     ),
-                    if (isAdmin)
+                    if (allows(AppPermission.manageMembers))
                       _QuickAction(
                         icon: Icons.group_outlined,
                         label: l10n.teamAndPolicies,
@@ -564,7 +578,7 @@ class _HerdStatusMetric {
   final Color color;
 }
 
-class _QuickAction extends StatelessWidget {
+class _QuickAction extends StatefulWidget {
   const _QuickAction({
     required this.icon,
     required this.label,
@@ -578,40 +592,175 @@ class _QuickAction extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_QuickAction> createState() => _QuickActionState();
+}
+
+class _QuickActionState extends State<_QuickAction> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(AppDimensions.radius),
-      onTap: onTap,
-      child: Container(
-        width: 94,
-        padding: const EdgeInsets.symmetric(
-          vertical: AppDimensions.spacingMedium,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) => Opacity(
+        opacity: value.clamp(0, 1).toDouble(),
+        child: Transform.translate(
+          offset: Offset(0, 9 * (1 - value)),
+          child: child,
         ),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.13),
-          borderRadius: BorderRadius.circular(AppDimensions.radius),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              child: Icon(icon, color: AppColors.inverseText, size: 20),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimensions.radius),
+        onTap: widget.onTap,
+        onHighlightChanged: (pressed) {
+          if (_pressed != pressed) setState(() => _pressed = pressed);
+        },
+        child: AnimatedScale(
+          scale: _pressed ? 0.96 : 1,
+          duration: const Duration(milliseconds: 130),
+          curve: Curves.easeOut,
+          child: Container(
+            width: 94,
+            padding: const EdgeInsets.symmetric(
+              vertical: AppDimensions.spacingMedium,
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
+            decoration: BoxDecoration(
+              color: widget.color.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(AppDimensions.radius),
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: widget.color,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    widget.icon,
+                    color: AppColors.inverseText,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+class _NotificationAction extends StatefulWidget {
+  const _NotificationAction({
+    required this.unreadCount,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final int unreadCount;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  State<_NotificationAction> createState() => _NotificationActionState();
+}
+
+class _NotificationActionState extends State<_NotificationAction>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    if (widget.unreadCount > 0) _pulseController.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _NotificationAction oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.unreadCount == 0 && widget.unreadCount > 0) {
+      _pulseController.repeat(reverse: true);
+    } else if (oldWidget.unreadCount > 0 && widget.unreadCount == 0) {
+      _pulseController
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: widget.tooltip,
+    onPressed: widget.onPressed,
+    icon: SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) => Transform.scale(
+              scale: widget.unreadCount > 0
+                  ? 1 + _pulseController.value * 0.14
+                  : 1,
+              child: child,
+            ),
+            child: Icon(
+              widget.unreadCount > 0
+                  ? Icons.notifications_active_rounded
+                  : Icons.notifications_outlined,
+              color: AppColors.primaryGreen,
+            ),
+          ),
+          if (widget.unreadCount > 0)
+            Positioned(
+              top: 2,
+              right: 0,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: const BoxDecoration(
+                  color: AppColors.danger,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  widget.unreadCount > 99 ? '99+' : '${widget.unreadCount}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _SectionHeader extends StatelessWidget {

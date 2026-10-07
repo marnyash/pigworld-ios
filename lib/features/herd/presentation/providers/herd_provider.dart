@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../features/auth/presentation/providers/auth_providers.dart';
@@ -21,23 +23,31 @@ class HerdNotifier extends AsyncNotifier<List<Animal>> {
     return ref.watch(herdApiProvider).fetchAnimals(farmId);
   }
 
-  Future<void> createSow({
+  Future<void> createAnimal({
     required String tag,
+    required String type,
+    required String sex,
     DateTime? birthDate,
     String? notes,
+    Uint8List? imageBytes,
+    String? imageName,
   }) async {
     final farmId = ref.read(authProvider).valueOrNull?.selectedFarm?.id;
     if (farmId == null) throw StateError('No farm selected.');
-    await ref
+    final animal = await ref
         .read(herdApiProvider)
-        .createSow(
+        .createAnimal(
           farmId: farmId,
           tag: tag,
+          type: type,
+          sex: sex,
           birthDate: birthDate,
           notes: notes,
+          imageBytes: imageBytes,
+          imageName: imageName,
         );
-    ref.invalidateSelf();
-    await future;
+    final animals = state.valueOrNull ?? const <Animal>[];
+    state = AsyncData([animal, ...animals]);
   }
 
   Future<void> updateAnimal({
