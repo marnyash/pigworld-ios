@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimensions.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
+import '../../../../features/herd/domain/entities/animal.dart';
+import '../../../../features/herd/presentation/providers/herd_provider.dart';
 import '../../data/pig_listing.dart';
 import '../providers/pig_marketplace_provider.dart';
 
@@ -116,6 +118,7 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
   final _location = TextEditingController();
   final _description = TextEditingController();
   String _currency = 'KES';
+  String? _animalId;
   bool _saving = false;
 
   @override
@@ -134,6 +137,20 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
   @override
   Widget build(BuildContext context) {
     final hasFarm = ref.watch(authProvider).valueOrNull?.selectedFarm != null;
+    final herdState = ref.watch(herdProvider);
+    final animals =
+        herdState.valueOrNull
+            ?.where(
+              (animal) =>
+                  animal.status == 'active' &&
+                  animal.imageUrl != null &&
+                  animal.imageUrl!.isNotEmpty,
+            )
+            .toList() ??
+        const <Animal>[];
+    final selectedAnimal = animals
+        .where((animal) => animal.id == _animalId)
+        .firstOrNull;
     return ListView(
       padding: const EdgeInsets.all(AppDimensions.pagePadding),
       children: [
@@ -144,6 +161,19 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
         const SizedBox(height: AppDimensions.spacingSmall),
         const Text('Create a listing that buyers can find in the buyer app.'),
         const SizedBox(height: AppDimensions.spacingLarge),
+        if (herdState.isLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (herdState.hasError)
+          _InfoCard(
+            icon: Icons.cloud_off_outlined,
+            message: 'Could not load farm pigs: ${herdState.error}',
+          )
+        else if (animals.isEmpty)
+          const _InfoCard(
+            icon: Icons.photo_camera_outlined,
+            message:
+                'Add an active pig and save its photo in Herd before posting it for buyers.',
+          ),
         if (!hasFarm)
           const _InfoCard(
             icon: Icons.agriculture_outlined,
@@ -162,6 +192,55 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
                 key: _formKey,
                 child: Column(
                   children: [
+                    if (animals.isNotEmpty) ...[
+                      DropdownButtonFormField<String>(
+                        key: ValueKey(_animalId),
+                        initialValue: _animalId,
+                        decoration: const InputDecoration(
+                          labelText: 'Pig photo from farm records',
+                        ),
+                        items: [
+                          for (final animal in animals)
+                            DropdownMenuItem(
+                              value: animal.id,
+                              child: Text(
+                                '${animal.tag} · ${animal.type} (${animal.sex})',
+                              ),
+                            ),
+                        ],
+                        validator: (value) => value == null
+                            ? 'Select the pig whose saved photo buyers should see.'
+                            : null,
+                        onChanged: (value) {
+                          setState(() {
+                            _animalId = value;
+                            final animal = animals
+                                .where((item) => item.id == value)
+                                .firstOrNull;
+                            _weight.text = animal?.weightKg?.toString() ?? '';
+                          });
+                        },
+                      ),
+                      if (selectedAnimal?.imageUrl != null) ...[
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            selectedAnimal!.imageUrl!,
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const _InfoCard(
+                                  icon: Icons.broken_image_outlined,
+                                  message:
+                                      'The saved pig photo could not be loaded.',
+                                ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                    ],
                     TextFormField(
                       controller: _title,
                       decoration: const InputDecoration(
@@ -257,9 +336,9 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'Average weight (kg, optional)',
+                        labelText: 'Weight (kg)',
                       ),
-                      validator: _optionalPositiveNumber,
+                      validator: _positiveNumber,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -280,7 +359,7 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: _saving ? null : _submit,
+                        onPressed: _saving || animals.isEmpty ? null : _submit,
                         icon: _saving
                             ? const SizedBox(
                                 width: 18,
@@ -320,11 +399,6 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
     return number == null || number <= 0 ? 'Enter an amount above zero.' : null;
   }
 
-  String? _optionalPositiveNumber(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    return _positiveNumber(value);
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -337,6 +411,7 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
             quantity: int.parse(_quantity.text.trim()),
             pricePerPig: double.parse(_price.text.trim()),
             currency: _currency,
+            animalId: _animalId,
             ageWeeks: int.tryParse(_age.text.trim()),
             weightKg: double.tryParse(_weight.text.trim()),
             location: _location.text.trim(),
@@ -344,6 +419,7 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
           );
       if (!mounted) return;
       _formKey.currentState!.reset();
+      setState(() => _animalId = null);
       _title.clear();
       _breed.clear();
       _quantity.text = '1';
