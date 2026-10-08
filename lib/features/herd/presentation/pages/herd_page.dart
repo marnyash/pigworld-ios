@@ -706,6 +706,14 @@ class _RegistrationDetailsGridState
                 : await draft.image!.readAsBytes(),
             imageName: draft.image?.name,
           );
+      if (!mounted) return;
+      setState(() {
+        draft.isSaving = false;
+        draft.isSaved = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${draft.tagController.text} saved.')),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => draft.isSaving = false);
@@ -776,6 +784,7 @@ class _AnimalDraft {
   String sex;
   XFile? image;
   bool isSaving = false;
+  bool isSaved = false;
 
   void dispose() => tagController.dispose();
 }
@@ -915,14 +924,14 @@ class _RegistrationAnimalCard extends StatelessWidget {
                 ),
               const Spacer(),
               FilledButton(
-                onPressed: draft.isSaving ? null : onSave,
+                onPressed: draft.isSaving || draft.isSaved ? null : onSave,
                 child: draft.isSaving
                     ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Save details'),
+                    : Text(draft.isSaved ? 'Saved' : 'Save details'),
               ),
             ],
           ),
