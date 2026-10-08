@@ -22,38 +22,92 @@ class ForBuyersTab extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(AppDimensions.pagePadding),
         children: [
-          Card(
-            color: AppColors.deepGreen,
-            child: Padding(
-              padding: const EdgeInsets.all(AppDimensions.spacingLarge),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Your farm on the pig marketplace',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.inverseText,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Buyers can browse available pigs and send a purchase request. '
-                    'Requests appear in My sales.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.inverseMutedText,
-                    ),
-                  ),
-                  if (farmName != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      farmName,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.inverseMutedText,
-                      ),
-                    ),
-                  ],
-                ],
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primaryGreen, AppColors.deepGreen],
               ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -28,
+                  bottom: -38,
+                  child: Icon(
+                    Icons.storefront_outlined,
+                    size: 150,
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(AppDimensions.spacingLarge),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Text(
+                          'FARM MARKETPLACE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            letterSpacing: 0.7,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Your farm on the pig marketplace',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppColors.inverseText,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Buyers can browse available pigs and send a purchase request. '
+                        'Requests appear in My sales.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.inverseMutedText,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (farmName != null) ...[
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              color: AppColors.leaf,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              farmName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: AppDimensions.spacingLarge),
@@ -496,16 +550,64 @@ class _ListingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    child: ListTile(
-      leading: const CircleAvatar(child: Icon(Icons.pets_outlined)),
-      title: Text(listing.title),
-      subtitle: Text(
-        '${listing.breed} · ${listing.quantity} available'
-        '${listing.location == null || listing.location!.isEmpty ? '' : ' · ${listing.location}'}',
-      ),
-      trailing: Text(
-        '${listing.currency} ${listing.pricePerPig.toStringAsFixed(0)}',
-        style: Theme.of(context).textTheme.titleSmall,
+    margin: const EdgeInsets.only(bottom: AppDimensions.spacingMedium),
+    clipBehavior: Clip.antiAlias,
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: 76,
+              height: 76,
+              child: listing.imageUrl == null
+                  ? const ColoredBox(
+                      color: AppColors.primaryContainer,
+                      child: Icon(Icons.pets_outlined),
+                    )
+                  : Image.network(
+                      listing.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const ColoredBox(
+                            color: AppColors.primaryContainer,
+                            child: Icon(Icons.pets_outlined),
+                          ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  listing.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${listing.breed} · ${listing.quantity} available'
+                  '${listing.location == null || listing.location!.isEmpty ? '' : ' · ${listing.location}'}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  '${listing.currency} ${listing.pricePerPig.toStringAsFixed(0)} each',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.primaryGreen,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     ),
   );
@@ -527,10 +629,42 @@ class _ManageListingCard extends ConsumerWidget {
         children: [
           Row(
             children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: listing.imageUrl == null
+                      ? const ColoredBox(
+                          color: AppColors.primaryContainer,
+                          child: Icon(Icons.pets_outlined),
+                        )
+                      : Image.network(
+                          listing.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const ColoredBox(
+                                color: AppColors.primaryContainer,
+                                child: Icon(Icons.pets_outlined),
+                              ),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  listing.title,
-                  style: Theme.of(context).textTheme.titleMedium,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      listing.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${listing.breed} · ${listing.quantity} available',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
               ),
               if (canManage)
@@ -565,8 +699,12 @@ class _ManageListingCard extends ConsumerWidget {
             ],
           ),
           Text(
-            '${listing.breed} · ${listing.quantity} available · '
-            '${listing.currency} ${listing.pricePerPig.toStringAsFixed(0)} each',
+            '${listing.currency} ${listing.pricePerPig.toStringAsFixed(0)} each'
+            '${listing.weightKg == null ? '' : ' · ${listing.weightKg} kg'}'
+            '${listing.location == null || listing.location!.isEmpty ? '' : ' · ${listing.location}'}',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
           ),
           for (final inquiry in listing.inquiries)
             _InquiryRow(

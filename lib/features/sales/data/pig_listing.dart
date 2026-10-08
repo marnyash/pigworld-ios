@@ -42,6 +42,7 @@ class PigListing {
     this.location,
     this.description,
     this.farmName,
+    this.imageUrl,
     this.inquiries = const [],
   });
 
@@ -57,6 +58,7 @@ class PigListing {
   final String? location;
   final String? description;
   final String? farmName;
+  final String? imageUrl;
   final List<PigInquiry> inquiries;
 
   factory PigListing.fromJson(Map<String, dynamic> json) => PigListing(
@@ -74,6 +76,7 @@ class PigListing {
     location: json['location'] as String? ?? json['farm_location'] as String?,
     description: json['description'] as String?,
     farmName: json['farm_name'] as String?,
+    imageUrl: json['image_url'] as String?,
     inquiries: (json['inquiries'] as List<dynamic>? ?? const [])
         .map((item) => PigInquiry.fromJson(item as Map<String, dynamic>))
         .toList(),
