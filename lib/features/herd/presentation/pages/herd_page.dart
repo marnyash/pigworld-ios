@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +10,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/components/bottom_navigation.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/animal.dart';
+import '../../../reports/presentation/widgets/herd_reports_browser.dart';
 import '../providers/herd_provider.dart';
 
 class HerdPage extends ConsumerWidget {
@@ -166,6 +169,9 @@ class HerdPage extends ConsumerWidget {
                       ),
                     ],
                     const SizedBox(height: AppDimensions.spacingLarge),
+                    const HerdReportsBrowser(),
+                    const SizedBox(height: AppDimensions.spacingLarge),
+                    const SizedBox(height: AppDimensions.spacingLarge),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -228,6 +234,7 @@ class HerdPage extends ConsumerWidget {
   Future<void> _showAddAnimalDialog(BuildContext context, WidgetRef ref) async {
     final tagController = TextEditingController();
     final notesController = TextEditingController();
+    final weightController = TextEditingController();
     DateTime? birthDate;
     XFile? image;
     String type = 'sow';
@@ -252,6 +259,22 @@ class HerdPage extends ConsumerWidget {
                           value == null || value.trim().isEmpty
                           ? 'Enter an animal tag.'
                           : null,
+                    ),
+                    TextFormField(
+                      controller: weightController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Weight (kg)',
+                      ),
+                      validator: (value) {
+                        final weight = double.tryParse(value?.trim() ?? '');
+                        if (weight == null || weight <= 0) {
+                          return 'Enter a weight greater than zero.';
+                        }
+                        return null;
+                      },
                     ),
                     DropdownButtonFormField<String>(
                       initialValue: type,
@@ -381,6 +404,7 @@ class HerdPage extends ConsumerWidget {
                           type: type,
                           sex: sex,
                           birthDate: birthDate,
+                          weightKg: double.parse(weightController.text),
                           notes: notesController.text,
                           imageBytes: image == null
                               ? null
@@ -405,6 +429,7 @@ class HerdPage extends ConsumerWidget {
     } finally {
       tagController.dispose();
       notesController.dispose();
+      weightController.dispose();
     }
   }
 
@@ -452,65 +477,116 @@ class HerdPage extends ConsumerWidget {
     final tagController = TextEditingController(text: animal.tag);
     final notesController = TextEditingController(text: animal.notes ?? '');
     String status = animal.status;
+    XFile? image;
     try {
       await showDialog<void>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text('Edit ${animal.tag}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: tagController,
-                decoration: const InputDecoration(labelText: 'Tag'),
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: status,
-                items: const [
-                  DropdownMenuItem(value: 'active', child: Text('Active')),
-                  DropdownMenuItem(value: 'sold', child: Text('Sold')),
-                  DropdownMenuItem(value: 'deceased', child: Text('Deceased')),
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: Text('Edit ${animal.tag}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: tagController,
+                    decoration: const InputDecoration(labelText: 'Tag'),
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: status,
+                    items: const [
+                      DropdownMenuItem(value: 'active', child: Text('Active')),
+                      DropdownMenuItem(value: 'sold', child: Text('Sold')),
+                      DropdownMenuItem(
+                        value: 'deceased',
+                        child: Text('Deceased'),
+                      ),
+                    ],
+                    onChanged: (value) => status = value ?? status,
+                    decoration: const InputDecoration(labelText: 'Status'),
+                  ),
+                  TextField(
+                    controller: notesController,
+                    decoration: const InputDecoration(labelText: 'Notes'),
+                  ),
+                  const SizedBox(height: 12),
+                  if (image != null)
+                    FutureBuilder(
+                      future: image!.readAsBytes(),
+                      builder: (context, snapshot) => snapshot.hasData
+                          ? Image.memory(
+                              snapshot.data!,
+                              height: 120,
+                              fit: BoxFit.cover,
+                            )
+                          : const SizedBox(
+                              height: 120,
+                              child: Center(child: CircularProgressIndicator()),
+                            ),
+                    )
+                  else if (animal.imageUrl != null)
+                    Image.network(
+                      animal.imageUrl!,
+                      height: 120,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          const Icon(Icons.pets_outlined, size: 48),
+                    )
+                  else
+                    const Icon(Icons.pets_outlined, size: 48),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final picked = await ImagePicker().pickImage(
+                        source: ImageSource.gallery,
+                        maxWidth: 1600,
+                        imageQuality: 80,
+                      );
+                      if (picked != null) setState(() => image = picked);
+                    },
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: Text(
+                      image == null ? 'Change photo' : 'Choose another photo',
+                    ),
+                  ),
                 ],
-                onChanged: (value) => status = value ?? status,
-                decoration: const InputDecoration(labelText: 'Status'),
               ),
-              TextField(
-                controller: notesController,
-                decoration: const InputDecoration(labelText: 'Notes'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  if (tagController.text.trim().isEmpty) return;
+                  try {
+                    await ref
+                        .read(herdProvider.notifier)
+                        .updateAnimal(
+                          animalId: animal.id,
+                          tag: tagController.text,
+                          status: status,
+                          notes: notesController.text,
+                          imageBytes: image == null
+                              ? null
+                              : await image!.readAsBytes(),
+                          imageName: image?.name,
+                        );
+                    if (dialogContext.mounted) Navigator.pop(dialogContext);
+                  } catch (error) {
+                    if (dialogContext.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Could not update animal: $error'),
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Save'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (tagController.text.trim().isEmpty) return;
-                try {
-                  await ref
-                      .read(herdProvider.notifier)
-                      .updateAnimal(
-                        animalId: animal.id,
-                        tag: tagController.text,
-                        status: status,
-                        notes: notesController.text,
-                      );
-                  if (dialogContext.mounted) Navigator.pop(dialogContext);
-                } catch (error) {
-                  if (dialogContext.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Could not update animal: $error'),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
         ),
       );
     } finally {
@@ -931,7 +1007,7 @@ class _AnimalCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${animal.type} · ${animal.sex} · ${_ageLabel(animal.birthDate)}',
+                    '${animal.type} · ${animal.sex} · ${_ageLabel(animal.birthDate)}${animal.weightKg == null ? '' : ' · ${animal.weightKg} kg'}',
                   ),
                   const SizedBox(height: 7),
                   Wrap(

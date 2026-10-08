@@ -28,6 +28,7 @@ class HerdNotifier extends AsyncNotifier<List<Animal>> {
     required String type,
     required String sex,
     DateTime? birthDate,
+    double? weightKg,
     String? notes,
     Uint8List? imageBytes,
     String? imageName,
@@ -42,6 +43,7 @@ class HerdNotifier extends AsyncNotifier<List<Animal>> {
           type: type,
           sex: sex,
           birthDate: birthDate,
+          weightKg: weightKg,
           notes: notes,
           imageBytes: imageBytes,
           imageName: imageName,
@@ -55,7 +57,10 @@ class HerdNotifier extends AsyncNotifier<List<Animal>> {
     String? tag,
     String? status,
     DateTime? birthDate,
+    double? weightKg,
     String? notes,
+    Uint8List? imageBytes,
+    String? imageName,
   }) async {
     final farmId = ref.read(authProvider).valueOrNull?.selectedFarm?.id;
     if (farmId == null) throw StateError('No farm selected.');
@@ -67,7 +72,10 @@ class HerdNotifier extends AsyncNotifier<List<Animal>> {
           tag: tag,
           status: status,
           birthDate: birthDate,
+          weightKg: weightKg,
           notes: notes,
+          imageBytes: imageBytes,
+          imageName: imageName,
         );
     ref.invalidateSelf();
     await future;

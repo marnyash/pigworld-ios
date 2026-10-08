@@ -30,6 +30,7 @@ class HerdApi {
     required String type,
     required String sex,
     DateTime? birthDate,
+    double? weightKg,
     String? notes,
     Uint8List? imageBytes,
     String? imageName,
@@ -40,6 +41,7 @@ class HerdApi {
         'type': type,
         'sex': sex,
         'birth_date': ?birthDate?.toIso8601String().split('T').first,
+        if (weightKg != null) 'weight_kg': weightKg,
         if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
       };
       final response = imageBytes == null
@@ -84,18 +86,36 @@ class HerdApi {
     String? tag,
     String? status,
     DateTime? birthDate,
+    double? weightKg,
     String? notes,
+    Uint8List? imageBytes,
+    String? imageName,
   }) async {
     try {
-      final response = await _dio.patch<Map<String, dynamic>>(
-        '/farms/$farmId/animals/$animalId',
-        data: {
-          'tag': tag?.trim(),
-          'status': status,
-          'birth_date': birthDate?.toIso8601String().split('T').first,
-          'notes': notes?.trim(),
-        },
-      );
+      final data = {
+        'tag': tag?.trim(),
+        'status': status,
+        'birth_date': birthDate?.toIso8601String().split('T').first,
+        'weight_kg': weightKg,
+        'notes': notes?.trim(),
+      };
+      final response = imageBytes == null
+          ? await _dio.patch<Map<String, dynamic>>(
+              '/farms/$farmId/animals/$animalId',
+              data: data,
+            )
+          : await _dio.post<Map<String, dynamic>>(
+              '/farms/$farmId/animals/$animalId',
+              data: FormData.fromMap({
+                ...data,
+                '_method': 'PATCH',
+                'image': MultipartFile.fromBytes(
+                  imageBytes,
+                  filename: imageName ?? 'animal.jpg',
+                ),
+              }),
+              options: Options(contentType: 'multipart/form-data'),
+            );
       return Animal.fromJson(response.data?['data'] as Map<String, dynamic>);
     } on DioException catch (error) {
       throw ErrorHandler.from(error);
