@@ -46,7 +46,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final session = ref.watch(authProvider).valueOrNull;
     final role = session?.user.role;
     final access = ref.watch(farmAccessProvider);
@@ -602,17 +602,17 @@ class _HerdStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final metrics = [
       _HerdStatusMetric(
-        label: AppLocalizations.of(context)!.pregnant,
+        label: AppLocalizations.of(context).pregnant,
         value: '$pregnant',
         color: AppColors.pigPink,
       ),
       _HerdStatusMetric(
-        label: AppLocalizations.of(context)!.vaccinated,
+        label: AppLocalizations.of(context).vaccinated,
         value: '$vaccinated',
         color: AppColors.info,
       ),
       _HerdStatusMetric(
-        label: AppLocalizations.of(context)!.active,
+        label: AppLocalizations.of(context).active,
         value: '$active',
         color: AppColors.success,
       ),

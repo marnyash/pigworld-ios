@@ -11,18 +11,37 @@ import 'package:proj/features/reports/domain/entities/report_metrics.dart';
 import 'package:proj/features/reports/presentation/providers/reports_providers.dart';
 import 'package:proj/features/sales/data/farm_buyer.dart';
 import 'package:proj/features/sales/data/farm_sale.dart';
+import 'package:proj/features/sales/data/pig_listing.dart';
 import 'package:proj/features/sales/presentation/pages/buyers_page.dart';
 import 'package:proj/features/sales/presentation/pages/sales_page.dart';
 import 'package:proj/features/sales/presentation/providers/farm_sales_provider.dart';
+import 'package:proj/features/sales/presentation/providers/pig_marketplace_provider.dart';
 import 'package:proj/features/settings/presentation/providers/farm_access_provider.dart';
 import 'package:proj/l10n/generated/app_localizations.dart';
 import 'package:proj/security/authorization/roles.dart';
 
 void main() {
+  test('pig listing reads its posted image URL', () {
+    final listing = PigListing.fromJson({
+      'id': 'pig-1',
+      'title': 'Healthy weaner',
+      'breed': 'Large White',
+      'quantity': 1,
+      'price_per_pig': '18000.00',
+      'currency': 'KES',
+      'status': 'available',
+      'image_url': 'https://api.example.test/storage/pig.jpg',
+    });
+
+    expect(listing.imageUrl, 'https://api.example.test/storage/pig.jpg');
+  });
+
   testWidgets('sales page displays farm orders and report metrics', (
     tester,
   ) async {
     await tester.pumpWidget(_testApp(const SalesPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('My sales'));
     await tester.pumpAndSettle();
 
     expect(find.text('Farm sales'), findsWidgets);
@@ -51,6 +70,7 @@ Widget _testApp(Widget child) {
       authProvider.overrideWith(_TestAuthNotifier.new),
       farmSalesProvider.overrideWith(_TestFarmSalesNotifier.new),
       farmAccessProvider.overrideWith(_TestFarmAccessNotifier.new),
+      pigMarketplaceProvider.overrideWith(_TestPigMarketplaceNotifier.new),
       reportsApiProvider.overrideWithValue(_FakeReportsApi(_metrics)),
     ],
     child: MaterialApp(
@@ -59,6 +79,11 @@ Widget _testApp(Widget child) {
       home: child,
     ),
   );
+}
+
+class _TestPigMarketplaceNotifier extends PigMarketplaceNotifier {
+  @override
+  Future<List<PigListing>> build() async => const [];
 }
 
 final _farm = const Farm(id: 'farm-1', name: 'Alpha Farm');
