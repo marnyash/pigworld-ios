@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimensions.dart';
@@ -582,11 +583,23 @@ class _ListingCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  listing.title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        listing.title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Share pig listing',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _shareListing(context, listing),
+                      icon: const Icon(Icons.share_outlined),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -611,6 +624,27 @@ class _ListingCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+Future<void> _shareListing(BuildContext context, PigListing listing) async {
+  try {
+    final renderObject = context.findRenderObject();
+    await SharePlus.instance.share(
+      ShareParams(
+        text: listing.shareText,
+        subject: listing.title,
+        sharePositionOrigin: renderObject is RenderBox
+            ? renderObject.localToGlobal(Offset.zero) & renderObject.size
+            : null,
+      ),
+    );
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not share pig listing: $error')),
+      );
+    }
+  }
 }
 
 class _ManageListingCard extends ConsumerWidget {

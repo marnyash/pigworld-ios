@@ -61,6 +61,17 @@ class PigListing {
   final String? imageUrl;
   final List<PigInquiry> inquiries;
 
+  String get shareText {
+    final details = <String>[
+      '$breed · $quantity available · $currency ${pricePerPig.toStringAsFixed(0)} each',
+      if (location?.isNotEmpty == true) location!,
+      if (ageWeeks != null) 'Age: $ageWeeks weeks',
+      if (weightKg != null) 'Weight: ${weightKg!.toStringAsFixed(1)} kg',
+      if (description?.isNotEmpty == true) description!,
+    ];
+    return 'Pig World Smart listing: $title\n${details.join('\n')}';
+  }
+
   factory PigListing.fromJson(Map<String, dynamic> json) => PigListing(
     id: '${json['id']}',
     title: '${json['title'] ?? ''}',
