@@ -10,11 +10,36 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/animal.dart';
 import '../providers/herd_provider.dart';
 
-class HerdPage extends ConsumerWidget {
+class HerdPage extends ConsumerStatefulWidget {
   const HerdPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HerdPage> createState() => _HerdPageState();
+}
+
+class _HerdPageState extends ConsumerState<HerdPage> {
+  late final TextEditingController _tagController;
+  late final TextEditingController _notesController;
+  late final TextEditingController _weightController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tagController = TextEditingController();
+    _notesController = TextEditingController();
+    _weightController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _tagController.dispose();
+    _notesController.dispose();
+    _weightController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final herd = ref.watch(herdProvider);
     final registeredFarm = ref.watch(authProvider).valueOrNull?.selectedFarm;
@@ -229,221 +254,204 @@ class HerdPage extends ConsumerWidget {
   }
 
   Future<void> _showAddAnimalDialog(BuildContext context, WidgetRef ref) async {
-    final tagController = TextEditingController();
-    final notesController = TextEditingController();
-    final weightController = TextEditingController();
+    _tagController.clear();
+    _notesController.clear();
+    _weightController.clear();
+    final tagController = _tagController;
+    final notesController = _notesController;
+    final weightController = _weightController;
     DateTime? birthDate;
     XFile? image;
     String type = 'sow';
     String sex = 'female';
     final formKey = GlobalKey<FormState>();
-    try {
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Add pig'),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: tagController,
-                      decoration: const InputDecoration(labelText: 'Tag'),
-                      validator: (value) {
-                        final tag = value?.trim() ?? '';
-                        if (tag.isEmpty) return 'Enter an animal tag.';
-                        if (tag.length > 50) {
-                          return 'Pig tags must be 50 characters or less.';
-                        }
-                        return null;
-                      },
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add pig'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: tagController,
+                    decoration: const InputDecoration(labelText: 'Tag'),
+                    validator: (value) {
+                      final tag = value?.trim() ?? '';
+                      if (tag.isEmpty) return 'Enter an animal tag.';
+                      if (tag.length > 50) {
+                        return 'Pig tags must be 50 characters or less.';
+                      }
+                      return null;
+                    },
+                  ),
+                  TextFormField(
+                    controller: weightController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
                     ),
-                    TextFormField(
-                      controller: weightController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Weight (kg)',
-                      ),
-                      validator: (value) {
-                        final weight = double.tryParse(value?.trim() ?? '');
-                        if (weight == null || weight <= 0) {
-                          return 'Enter a weight greater than zero.';
-                        }
-                        if (weight > 999999.99) {
-                          return 'Weight must be 999,999.99 kg or less.';
-                        }
-                        return null;
-                      },
-                    ),
+                    decoration: const InputDecoration(labelText: 'Weight (kg)'),
+                    validator: (value) {
+                      final weight = double.tryParse(value?.trim() ?? '');
+                      if (weight == null || weight <= 0) {
+                        return 'Enter a weight greater than zero.';
+                      }
+                      if (weight > 999999.99) {
+                        return 'Weight must be 999,999.99 kg or less.';
+                      }
+                      return null;
+                    },
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: type,
+                    decoration: const InputDecoration(labelText: 'Type'),
+                    items: const [
+                      DropdownMenuItem(value: 'boar', child: Text('Male pig')),
+                      DropdownMenuItem(value: 'sow', child: Text('Female pig')),
+                      DropdownMenuItem(value: 'piglet', child: Text('Piglet')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        type = value;
+                        sex = switch (value) {
+                          'boar' => 'male',
+                          'sow' => 'female',
+                          _ => 'unknown',
+                        };
+                      });
+                    },
+                  ),
+                  if (type == 'piglet')
                     DropdownButtonFormField<String>(
-                      initialValue: type,
-                      decoration: const InputDecoration(labelText: 'Type'),
+                      initialValue: sex,
+                      decoration: const InputDecoration(labelText: 'Sex'),
                       items: const [
                         DropdownMenuItem(
-                          value: 'boar',
-                          child: Text('Male pig'),
+                          value: 'unknown',
+                          child: Text('Not set'),
                         ),
+                        DropdownMenuItem(value: 'male', child: Text('Male')),
                         DropdownMenuItem(
-                          value: 'sow',
-                          child: Text('Female pig'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'piglet',
-                          child: Text('Piglet'),
+                          value: 'female',
+                          child: Text('Female'),
                         ),
                       ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() {
-                          type = value;
-                          sex = switch (value) {
-                            'boar' => 'male',
-                            'sow' => 'female',
-                            _ => 'unknown',
-                          };
-                        });
+                      onChanged: (value) => setState(() => sex = value ?? sex),
+                    ),
+                  TextFormField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes (optional)',
+                    ),
+                    validator: (value) => (value?.length ?? 0) > 2000
+                        ? 'Notes must be 2,000 characters or less.'
+                        : null,
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          firstDate: DateTime(1990),
+                          lastDate: DateTime.now(),
+                          initialDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setState(() => birthDate = picked);
+                        }
                       },
-                    ),
-                    if (type == 'piglet')
-                      DropdownButtonFormField<String>(
-                        initialValue: sex,
-                        decoration: const InputDecoration(labelText: 'Sex'),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'unknown',
-                            child: Text('Not set'),
-                          ),
-                          DropdownMenuItem(value: 'male', child: Text('Male')),
-                          DropdownMenuItem(
-                            value: 'female',
-                            child: Text('Female'),
-                          ),
-                        ],
-                        onChanged: (value) =>
-                            setState(() => sex = value ?? sex),
-                      ),
-                    TextFormField(
-                      controller: notesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Notes (optional)',
-                      ),
-                      validator: (value) => (value?.length ?? 0) > 2000
-                          ? 'Notes must be 2,000 characters or less.'
-                          : null,
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            firstDate: DateTime(1990),
-                            lastDate: DateTime.now(),
-                            initialDate: DateTime.now(),
-                          );
-                          if (picked != null) {
-                            setState(() => birthDate = picked);
-                          }
-                        },
-                        icon: const Icon(Icons.calendar_today_outlined),
-                        label: Text(
-                          birthDate == null
-                              ? 'Add birth date'
-                              : 'Born ${birthDate!.day}/${birthDate!.month}/${birthDate!.year}',
-                        ),
+                      icon: const Icon(Icons.calendar_today_outlined),
+                      label: Text(
+                        birthDate == null
+                            ? 'Add birth date'
+                            : 'Born ${birthDate!.day}/${birthDate!.month}/${birthDate!.year}',
                       ),
                     ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: () async {
-                          final picked = await ImagePicker().pickImage(
-                            source: ImageSource.gallery,
-                            maxWidth: 1600,
-                            imageQuality: 80,
-                          );
-                          if (picked != null) setState(() => image = picked);
-                        },
-                        icon: const Icon(Icons.add_a_photo_outlined),
-                        label: Text(
-                          image == null ? 'Add a photo' : 'Photo added',
-                        ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        final picked = await ImagePicker().pickImage(
+                          source: ImageSource.gallery,
+                          maxWidth: 1600,
+                          imageQuality: 80,
+                        );
+                        if (picked != null) setState(() => image = picked);
+                      },
+                      icon: const Icon(Icons.add_a_photo_outlined),
+                      label: Text(
+                        image == null ? 'Add a photo' : 'Photo added',
                       ),
                     ),
-                    if (image != null)
-                      FutureBuilder(
-                        future: image!.readAsBytes(),
-                        builder: (context, snapshot) => snapshot.hasData
-                            ? Image.memory(
-                                snapshot.data!,
-                                height: 100,
-                                fit: BoxFit.cover,
-                              )
-                            : const SizedBox(
-                                height: 100,
-                                child: Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              ),
-                      ),
-                  ],
-                ),
+                  ),
+                  if (image != null)
+                    FutureBuilder(
+                      future: image!.readAsBytes(),
+                      builder: (context, snapshot) => snapshot.hasData
+                          ? Image.memory(
+                              snapshot.data!,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            )
+                          : const SizedBox(
+                              height: 100,
+                              child: Center(child: CircularProgressIndicator()),
+                            ),
+                    ),
+                ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  if (!(formKey.currentState?.validate() ?? false)) return;
-                  try {
-                    final imageBytes = image == null
-                        ? null
-                        : await image!.readAsBytes();
-                    if (imageBytes != null &&
-                        imageBytes.length > 5 * 1024 * 1024) {
-                      throw StateError('Pig photos must be 5 MB or smaller.');
-                    }
-                    await ref
-                        .read(herdProvider.notifier)
-                        .createAnimal(
-                          tag: tagController.text.trim(),
-                          type: type,
-                          sex: sex,
-                          birthDate: birthDate,
-                          weightKg: double.parse(weightController.text),
-                          notes: notesController.text,
-                          imageBytes: imageBytes,
-                          imageName: image?.name,
-                        );
-                    if (dialogContext.mounted) Navigator.pop(dialogContext);
-                  } catch (error) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Could not add pig: $error')),
-                      );
-                    }
-                  }
-                },
-                child: const Text('Add pig'),
-              ),
-            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (!(formKey.currentState?.validate() ?? false)) return;
+                try {
+                  final imageBytes = image == null
+                      ? null
+                      : await image!.readAsBytes();
+                  if (imageBytes != null &&
+                      imageBytes.length > 5 * 1024 * 1024) {
+                    throw StateError('Pig photos must be 5 MB or smaller.');
+                  }
+                  await ref
+                      .read(herdProvider.notifier)
+                      .createAnimal(
+                        tag: tagController.text.trim(),
+                        type: type,
+                        sex: sex,
+                        birthDate: birthDate,
+                        weightKg: double.parse(weightController.text),
+                        notes: notesController.text,
+                        imageBytes: imageBytes,
+                        imageName: image?.name,
+                      );
+                  if (dialogContext.mounted) Navigator.pop(dialogContext);
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Could not add pig: $error')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Add pig'),
+            ),
+          ],
         ),
-      );
-    } finally {
-      tagController.dispose();
-      notesController.dispose();
-      weightController.dispose();
-    }
+      ),
+    );
   }
 
   Future<void> _archiveAnimal(
@@ -487,132 +495,129 @@ class HerdPage extends ConsumerWidget {
     WidgetRef ref,
     Animal animal,
   ) async {
-    final tagController = TextEditingController(text: animal.tag);
-    final notesController = TextEditingController(text: animal.notes ?? '');
+    _tagController.text = animal.tag;
+    _notesController.text = animal.notes ?? '';
+    final tagController = _tagController;
+    final notesController = _notesController;
     String status = animal.status;
     XFile? image;
-    try {
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: Text('Edit ${animal.tag}'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: tagController,
-                    decoration: const InputDecoration(labelText: 'Tag'),
-                    maxLength: 50,
-                  ),
-                  DropdownButtonFormField<String>(
-                    initialValue: status,
-                    items: const [
-                      DropdownMenuItem(value: 'active', child: Text('Active')),
-                      DropdownMenuItem(value: 'sold', child: Text('Sold')),
-                      DropdownMenuItem(
-                        value: 'deceased',
-                        child: Text('Deceased'),
-                      ),
-                    ],
-                    onChanged: (value) => status = value ?? status,
-                    decoration: const InputDecoration(labelText: 'Status'),
-                  ),
-                  TextField(
-                    controller: notesController,
-                    decoration: const InputDecoration(labelText: 'Notes'),
-                    maxLength: 2000,
-                  ),
-                  const SizedBox(height: 12),
-                  if (image != null)
-                    FutureBuilder(
-                      future: image!.readAsBytes(),
-                      builder: (context, snapshot) => snapshot.hasData
-                          ? Image.memory(
-                              snapshot.data!,
-                              height: 120,
-                              fit: BoxFit.cover,
-                            )
-                          : const SizedBox(
-                              height: 120,
-                              child: Center(child: CircularProgressIndicator()),
-                            ),
-                    )
-                  else if (animal.imageUrl != null)
-                    Image.network(
-                      animal.imageUrl!,
-                      height: 120,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          const Icon(Icons.pets_outlined, size: 48),
-                    )
-                  else
-                    const Icon(Icons.pets_outlined, size: 48),
-                  TextButton.icon(
-                    onPressed: () async {
-                      final picked = await ImagePicker().pickImage(
-                        source: ImageSource.gallery,
-                        maxWidth: 1600,
-                        imageQuality: 80,
-                      );
-                      if (picked != null) setState(() => image = picked);
-                    },
-                    icon: const Icon(Icons.add_a_photo_outlined),
-                    label: Text(
-                      image == null ? 'Change photo' : 'Choose another photo',
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Edit ${animal.tag}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: tagController,
+                  decoration: const InputDecoration(labelText: 'Tag'),
+                  maxLength: 50,
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: status,
+                  items: const [
+                    DropdownMenuItem(value: 'active', child: Text('Active')),
+                    DropdownMenuItem(value: 'sold', child: Text('Sold')),
+                    DropdownMenuItem(
+                      value: 'deceased',
+                      child: Text('Deceased'),
                     ),
+                  ],
+                  onChanged: (value) => status = value ?? status,
+                  decoration: const InputDecoration(labelText: 'Status'),
+                ),
+                TextField(
+                  controller: notesController,
+                  decoration: const InputDecoration(labelText: 'Notes'),
+                  maxLength: 2000,
+                ),
+                const SizedBox(height: 12),
+                if (image != null)
+                  FutureBuilder(
+                    future: image!.readAsBytes(),
+                    builder: (context, snapshot) => snapshot.hasData
+                        ? Image.memory(
+                            snapshot.data!,
+                            height: 120,
+                            fit: BoxFit.cover,
+                          )
+                        : const SizedBox(
+                            height: 120,
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                  )
+                else if (animal.imageUrl != null)
+                  Image.network(
+                    animal.imageUrl!,
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) =>
+                        const Icon(Icons.pets_outlined, size: 48),
+                  )
+                else
+                  const Icon(Icons.pets_outlined, size: 48),
+                TextButton.icon(
+                  onPressed: () async {
+                    final picked = await ImagePicker().pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 1600,
+                      imageQuality: 80,
+                    );
+                    if (picked != null) setState(() => image = picked);
+                  },
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: Text(
+                    image == null ? 'Change photo' : 'Choose another photo',
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  if (tagController.text.trim().isEmpty) return;
-                  try {
-                    final imageBytes = image == null
-                        ? null
-                        : await image!.readAsBytes();
-                    if (imageBytes != null &&
-                        imageBytes.length > 5 * 1024 * 1024) {
-                      throw StateError('Pig photos must be 5 MB or smaller.');
-                    }
-                    await ref
-                        .read(herdProvider.notifier)
-                        .updateAnimal(
-                          animalId: animal.id,
-                          tag: tagController.text,
-                          status: status,
-                          notes: notesController.text,
-                          imageBytes: imageBytes,
-                          imageName: image?.name,
-                        );
-                    if (dialogContext.mounted) Navigator.pop(dialogContext);
-                  } catch (error) {
-                    if (dialogContext.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Could not update animal: $error'),
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: const Text('Save'),
-              ),
-            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (tagController.text.trim().isEmpty) return;
+                try {
+                  final imageBytes = image == null
+                      ? null
+                      : await image!.readAsBytes();
+                  if (imageBytes != null &&
+                      imageBytes.length > 5 * 1024 * 1024) {
+                    throw StateError('Pig photos must be 5 MB or smaller.');
+                  }
+                  await ref
+                      .read(herdProvider.notifier)
+                      .updateAnimal(
+                        animalId: animal.id,
+                        tag: tagController.text,
+                        status: status,
+                        notes: notesController.text,
+                        imageBytes: imageBytes,
+                        imageName: image?.name,
+                      );
+                  if (dialogContext.mounted) Navigator.pop(dialogContext);
+                } catch (error) {
+                  if (dialogContext.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Could not update animal: $error'),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-      );
-    } finally {
-      tagController.dispose();
-      notesController.dispose();
-    }
+      ),
+    );
   }
 }
 
