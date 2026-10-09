@@ -32,6 +32,7 @@ class HerdApi {
     required String sex,
     DateTime? birthDate,
     double? weightKg,
+    bool isPregnant = false,
     String? notes,
     Uint8List? imageBytes,
     String? imageName,
@@ -44,6 +45,7 @@ class HerdApi {
         'sex': sex,
         'birth_date': ?birthDate?.toIso8601String().split('T').first,
         'weight_kg': ?weightKg,
+        'is_pregnant': isPregnant,
         'notes': ?(trimmedNotes?.isNotEmpty == true ? trimmedNotes : null),
       };
       final response = imageBytes == null
@@ -55,6 +57,7 @@ class HerdApi {
               '/farms/$farmId/animals',
               data: FormData.fromMap({
                 ...data,
+                'is_pregnant': isPregnant ? '1' : '0',
                 'image': MultipartFile.fromBytes(
                   imageBytes,
                   filename: imageName ?? 'animal.jpg',
@@ -89,6 +92,7 @@ class HerdApi {
     String? status,
     DateTime? birthDate,
     double? weightKg,
+    bool? isPregnant,
     String? notes,
     Uint8List? imageBytes,
     String? imageName,
@@ -99,6 +103,7 @@ class HerdApi {
         if (status != null) 'status': status,
         'birth_date': birthDate?.toIso8601String().split('T').first,
         'weight_kg': weightKg,
+        'is_pregnant': ?isPregnant,
         'notes': notes?.trim(),
       };
       final response = imageBytes == null
@@ -110,6 +115,7 @@ class HerdApi {
               '/farms/$farmId/animals/$animalId',
               data: FormData.fromMap({
                 ...data,
+                if (isPregnant != null) 'is_pregnant': isPregnant ? '1' : '0',
                 '_method': 'PATCH',
                 'image': MultipartFile.fromBytes(
                   imageBytes,
