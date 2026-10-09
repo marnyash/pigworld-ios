@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import '../../../../core/errors/error_handler.dart';
+import '../../../../core/network/api_asset_url.dart';
 import '../domain/entities/animal.dart';
 
 class HerdApi {
@@ -17,7 +18,7 @@ class HerdApi {
       );
       final data = response.data?['data'] as List<dynamic>? ?? [];
       return data
-          .map((item) => Animal.fromJson(item as Map<String, dynamic>))
+          .map((item) => _parseAnimal(item as Map<String, dynamic>))
           .toList();
     } on DioException catch (error) {
       throw ErrorHandler.from(error);
@@ -36,13 +37,14 @@ class HerdApi {
     String? imageName,
   }) async {
     try {
+      final trimmedNotes = notes?.trim();
       final data = {
         'tag': tag,
         'type': type,
         'sex': sex,
         'birth_date': ?birthDate?.toIso8601String().split('T').first,
-        if (weightKg != null) 'weight_kg': weightKg,
-        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        'weight_kg': ?weightKg,
+        'notes': ?(trimmedNotes?.isNotEmpty == true ? trimmedNotes : null),
       };
       final response = imageBytes == null
           ? await _dio.post<Map<String, dynamic>>(
@@ -60,7 +62,7 @@ class HerdApi {
               }),
               options: Options(contentType: 'multipart/form-data'),
             );
-      return Animal.fromJson(response.data?['data'] as Map<String, dynamic>);
+      return _parseAnimal(response.data?['data'] as Map<String, dynamic>);
     } on DioException catch (error) {
       throw ErrorHandler.from(error);
     }
@@ -74,7 +76,7 @@ class HerdApi {
       final response = await _dio.get<Map<String, dynamic>>(
         '/farms/$farmId/animals/$animalId',
       );
-      return Animal.fromJson(response.data?['data'] as Map<String, dynamic>);
+      return _parseAnimal(response.data?['data'] as Map<String, dynamic>);
     } on DioException catch (error) {
       throw ErrorHandler.from(error);
     }
@@ -116,7 +118,7 @@ class HerdApi {
               }),
               options: Options(contentType: 'multipart/form-data'),
             );
-      return Animal.fromJson(response.data?['data'] as Map<String, dynamic>);
+      return _parseAnimal(response.data?['data'] as Map<String, dynamic>);
     } on DioException catch (error) {
       throw ErrorHandler.from(error);
     }
@@ -130,9 +132,17 @@ class HerdApi {
       final response = await _dio.delete<Map<String, dynamic>>(
         '/farms/$farmId/animals/$animalId',
       );
-      return Animal.fromJson(response.data?['data'] as Map<String, dynamic>);
+      return _parseAnimal(response.data?['data'] as Map<String, dynamic>);
     } on DioException catch (error) {
       throw ErrorHandler.from(error);
     }
   }
+
+  Animal _parseAnimal(Map<String, dynamic> json) => Animal.fromJson({
+    ...json,
+    'image_url': resolveApiAssetUrl(
+      json['image_url'] as String?,
+      apiBaseUrl: _dio.options.baseUrl,
+    ),
+  });
 }

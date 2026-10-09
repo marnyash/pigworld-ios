@@ -44,6 +44,33 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     super.dispose();
   }
 
+  Future<void> _clearNotifications(List<FarmNotification> notifications) async {
+    final unread = notifications.where((notification) => !notification.isRead);
+    if (unread.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No unread notifications.')));
+      return;
+    }
+
+    try {
+      for (final notification in unread) {
+        await ref
+            .read(notificationsProvider.notifier)
+            .markAsRead(notification.id);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cleared ${unread.length} notifications.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not clear notifications: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -353,9 +380,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 const SizedBox(height: AppDimensions.spacingLarge),
                 _SectionHeader(title: l10n.quickActions),
                 const SizedBox(height: AppDimensions.spacingMedium),
-                Wrap(
-                  spacing: AppDimensions.spacingMedium,
-                  runSpacing: AppDimensions.spacingMedium,
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: AppDimensions.spacingMedium,
+                  crossAxisSpacing: AppDimensions.spacingMedium,
+                  childAspectRatio: 1.05,
                   children: [
                     if (allows(AppPermission.manageHerd))
                       _QuickAction(
@@ -405,6 +436,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         color: AppColors.aqua,
                         onTap: () => context.go(AppRoutes.farmManagement),
                       ),
+                    _QuickAction(
+                      icon: Icons.clear_all_rounded,
+                      label: 'Clear',
+                      color: AppColors.danger,
+                      onTap: () => _clearNotifications(notifications),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppDimensions.spacingLarge),
@@ -726,7 +763,7 @@ class _QuickActionState extends State<_QuickAction> {
           duration: const Duration(milliseconds: 130),
           curve: Curves.easeOut,
           child: Container(
-            width: 104,
+            width: double.infinity,
             padding: const EdgeInsets.symmetric(
               vertical: AppDimensions.spacingMedium,
             ),
