@@ -354,7 +354,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   _HerdStatusCard(
                     pregnant: pregnantCount,
                     vaccinated: vaccinatedCount,
-                    active: herdCount,
                   ),
                   const SizedBox(height: AppDimensions.spacingLarge),
                 ],
@@ -443,42 +442,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       onTap: () => _clearNotifications(notifications),
                     ),
                   ],
-                ),
-                const SizedBox(height: AppDimensions.spacingLarge),
-                _SectionHeader(title: l10n.recentActivity),
-                const SizedBox(height: AppDimensions.spacingMedium),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppDimensions.spacingLarge),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryGreen.withValues(
-                              alpha: 0.12,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.inbox_outlined,
-                            color: AppColors.primaryGreen,
-                          ),
-                        ),
-                        const SizedBox(width: AppDimensions.spacingMedium),
-                        Expanded(
-                          child: Text(
-                            overview.valueOrNull?['recent_activity'] is List &&
-                                    (overview.valueOrNull!['recent_activity']
-                                            as List)
-                                        .isNotEmpty
-                                ? 'Recent farm activity is available in the activity view.'
-                                : 'No recent activity recorded yet.',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -625,15 +588,10 @@ class _StatCard extends StatelessWidget {
 }
 
 class _HerdStatusCard extends StatelessWidget {
-  const _HerdStatusCard({
-    required this.pregnant,
-    required this.vaccinated,
-    required this.active,
-  });
+  const _HerdStatusCard({required this.pregnant, required this.vaccinated});
 
   final int pregnant;
   final int vaccinated;
-  final int active;
 
   @override
   Widget build(BuildContext context) {
@@ -647,11 +605,6 @@ class _HerdStatusCard extends StatelessWidget {
         label: AppLocalizations.of(context).vaccinated,
         value: '$vaccinated',
         color: AppColors.info,
-      ),
-      _HerdStatusMetric(
-        label: AppLocalizations.of(context).active,
-        value: '$active',
-        color: AppColors.success,
       ),
     ];
 
@@ -765,7 +718,7 @@ class _QuickActionState extends State<_QuickAction> {
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(
-              vertical: AppDimensions.spacingMedium,
+              vertical: AppDimensions.spacingSmall,
             ),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
@@ -783,7 +736,7 @@ class _QuickActionState extends State<_QuickAction> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: widget.color,
                     shape: BoxShape.circle,
@@ -794,7 +747,7 @@ class _QuickActionState extends State<_QuickAction> {
                     size: 20,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
                   widget.label,
                   maxLines: 2,

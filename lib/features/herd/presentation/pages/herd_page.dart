@@ -8,7 +8,6 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/components/bottom_navigation.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/animal.dart';
-import '../../../reports/presentation/widgets/herd_reports_browser.dart';
 import '../providers/herd_provider.dart';
 
 class HerdPage extends ConsumerWidget {
@@ -151,37 +150,13 @@ class HerdPage extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: AppDimensions.spacingMedium),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _HerdSummary(
-                            label: 'Details entered',
-                            value: '$displayedHerdCount',
-                            icon: Icons.pets_outlined,
-                            color: AppColors.primaryGreen,
-                          ),
-                        ),
-                        const SizedBox(width: AppDimensions.spacingMedium),
-                        Expanded(
-                          child: _HerdSummary(
-                            label: l10n.active,
-                            value:
-                                '${animals.where((animal) => animal.status == 'active').length}',
-                            icon: Icons.favorite_border,
-                            color: AppColors.success,
-                          ),
-                        ),
-                      ],
+                    _HerdSummary(
+                      label: 'Details entered',
+                      value: '$displayedHerdCount',
+                      icon: Icons.pets_outlined,
+                      color: AppColors.primaryGreen,
                     ),
                     const SizedBox(height: AppDimensions.spacingMedium),
-                    if (registeredHerdCount > 0) ...[
-                      const SizedBox(height: AppDimensions.spacingMedium),
-                      _RegistrationSummary(
-                        motherPigs: registeredFarm?.motherPigCount ?? 0,
-                        piglets: registeredFarm?.registeredPigletCount ?? 0,
-                        pregnantPigs: registeredFarm?.pregnantPigCount ?? 0,
-                      ),
-                    ],
                     if (remainingCount > 0) ...[
                       const SizedBox(height: AppDimensions.spacingMedium),
                       _RegistrationDetailsGrid(
@@ -193,9 +168,6 @@ class HerdPage extends ConsumerWidget {
                         firstTagNumber: animals.length + 1,
                       ),
                     ],
-                    const SizedBox(height: AppDimensions.spacingLarge),
-                    const HerdReportsBrowser(),
-                    const SizedBox(height: AppDimensions.spacingLarge),
                     const SizedBox(height: AppDimensions.spacingLarge),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -280,10 +252,14 @@ class HerdPage extends ConsumerWidget {
                     TextFormField(
                       controller: tagController,
                       decoration: const InputDecoration(labelText: 'Tag'),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Enter an animal tag.'
-                          : null,
+                      validator: (value) {
+                        final tag = value?.trim() ?? '';
+                        if (tag.isEmpty) return 'Enter an animal tag.';
+                        if (tag.length > 50) {
+                          return 'Pig tags must be 50 characters or less.';
+                        }
+                        return null;
+                      },
                     ),
                     TextFormField(
                       controller: weightController,
@@ -297,6 +273,9 @@ class HerdPage extends ConsumerWidget {
                         final weight = double.tryParse(value?.trim() ?? '');
                         if (weight == null || weight <= 0) {
                           return 'Enter a weight greater than zero.';
+                        }
+                        if (weight > 999999.99) {
+                          return 'Weight must be 999,999.99 kg or less.';
                         }
                         return null;
                       },
@@ -348,11 +327,14 @@ class HerdPage extends ConsumerWidget {
                         onChanged: (value) =>
                             setState(() => sex = value ?? sex),
                       ),
-                    TextField(
+                    TextFormField(
                       controller: notesController,
                       decoration: const InputDecoration(
                         labelText: 'Notes (optional)',
                       ),
+                      validator: (value) => (value?.length ?? 0) > 2000
+                          ? 'Notes must be 2,000 characters or less.'
+                          : null,
                     ),
                     const SizedBox(height: 8),
                     Align(
@@ -423,6 +405,13 @@ class HerdPage extends ConsumerWidget {
                 onPressed: () async {
                   if (!(formKey.currentState?.validate() ?? false)) return;
                   try {
+                    final imageBytes = image == null
+                        ? null
+                        : await image!.readAsBytes();
+                    if (imageBytes != null &&
+                        imageBytes.length > 5 * 1024 * 1024) {
+                      throw StateError('Pig photos must be 5 MB or smaller.');
+                    }
                     await ref
                         .read(herdProvider.notifier)
                         .createAnimal(
@@ -432,9 +421,7 @@ class HerdPage extends ConsumerWidget {
                           birthDate: birthDate,
                           weightKg: double.parse(weightController.text),
                           notes: notesController.text,
-                          imageBytes: image == null
-                              ? null
-                              : await image!.readAsBytes(),
+                          imageBytes: imageBytes,
                           imageName: image?.name,
                         );
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
@@ -517,6 +504,7 @@ class HerdPage extends ConsumerWidget {
                   TextField(
                     controller: tagController,
                     decoration: const InputDecoration(labelText: 'Tag'),
+                    maxLength: 50,
                   ),
                   DropdownButtonFormField<String>(
                     initialValue: status,
@@ -534,6 +522,7 @@ class HerdPage extends ConsumerWidget {
                   TextField(
                     controller: notesController,
                     decoration: const InputDecoration(labelText: 'Notes'),
+                    maxLength: 2000,
                   ),
                   const SizedBox(height: 12),
                   if (image != null)
@@ -586,6 +575,13 @@ class HerdPage extends ConsumerWidget {
                 onPressed: () async {
                   if (tagController.text.trim().isEmpty) return;
                   try {
+                    final imageBytes = image == null
+                        ? null
+                        : await image!.readAsBytes();
+                    if (imageBytes != null &&
+                        imageBytes.length > 5 * 1024 * 1024) {
+                      throw StateError('Pig photos must be 5 MB or smaller.');
+                    }
                     await ref
                         .read(herdProvider.notifier)
                         .updateAnimal(
@@ -593,9 +589,7 @@ class HerdPage extends ConsumerWidget {
                           tag: tagController.text,
                           status: status,
                           notes: notesController.text,
-                          imageBytes: image == null
-                              ? null
-                              : await image!.readAsBytes(),
+                          imageBytes: imageBytes,
                           imageName: image?.name,
                         );
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
@@ -619,51 +613,6 @@ class HerdPage extends ConsumerWidget {
       tagController.dispose();
       notesController.dispose();
     }
-  }
-}
-
-class _RegistrationSummary extends StatelessWidget {
-  const _RegistrationSummary({
-    required this.motherPigs,
-    required this.piglets,
-    required this.pregnantPigs,
-  });
-
-  final int motherPigs;
-  final int piglets;
-  final int pregnantPigs;
-
-  @override
-  Widget build(BuildContext context) {
-    final summary = <String>[
-      if (motherPigs > 0) '$motherPigs mothers',
-      if (piglets > 0) '$piglets piglets',
-      if (pregnantPigs > 0) '$pregnantPigs pregnant',
-    ].join(' • ');
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primaryContainer, AppColors.infoContainer],
-        ),
-        borderRadius: BorderRadius.circular(AppDimensions.radius),
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            backgroundColor: AppColors.primaryGreen,
-            child: Icon(Icons.auto_awesome, color: AppColors.inverseText),
-          ),
-          const SizedBox(width: AppDimensions.spacingMedium),
-          Expanded(
-            child: Text(
-              'Setup saved: $summary',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

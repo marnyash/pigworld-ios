@@ -95,8 +95,8 @@ class HerdApi {
   }) async {
     try {
       final data = {
-        'tag': tag?.trim(),
-        'status': status,
+        if (tag != null) 'tag': tag.trim(),
+        if (status != null) 'status': status,
         'birth_date': birthDate?.toIso8601String().split('T').first,
         'weight_kg': weightKg,
         'notes': notes?.trim(),

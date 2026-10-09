@@ -22,5 +22,7 @@ void main() {
     expect(find.text('Herd status'), findsNothing);
     expect(find.text('Pregnant'), findsNothing);
     expect(find.text('Vaccinated'), findsNothing);
+    expect(find.textContaining('Setup saved:'), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
   });
 }
