@@ -112,7 +112,7 @@ class _HerdSetupPageState extends ConsumerState<HerdSetupPage> {
                 ? 'A quick snapshot personalizes your dashboard. Complete an individual record for every pig from Herd after signup.'
                 : _step == 1
                 ? 'Group piglets by age here. Complete an individual record for every pig from Herd after signup.'
-                : 'This optional detail helps keep your breeding picture current.',
+                : 'This optional detail helps keep your insemination picture current.',
           ),
           const SizedBox(height: 28),
           if (_step == 0) ...[
@@ -121,7 +121,7 @@ class _HerdSetupPageState extends ConsumerState<HerdSetupPage> {
               iconColor: AppColors.pigPink,
               iconBackground: AppColors.secondaryContainer,
               title: 'Mother pigs',
-              description: 'Add the breeding females currently in your herd.',
+              description: 'Add the sows currently in your herd.',
               child: TextField(
                 controller: _motherPigs,
                 keyboardType: TextInputType.number,

@@ -51,7 +51,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inventory => 'Inventory';
 
   @override
-  String get breeding => 'Breeding';
+  String get breeding => 'Insemination';
 
   @override
   String get sales => 'Sales';
@@ -136,7 +136,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get herdUnits => 'Herd units';
 
   @override
-  String get herdUnitsDescription => 'Kg, breeding cycles, and display units';
+  String get herdUnitsDescription => 'Kg, insemination cycles, and display units';
 
   @override
   String get timezoneAndDateFormat => 'Timezone & date format';

@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -174,6 +177,9 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
   final _description = TextEditingController();
   String _currency = 'KES';
   String? _animalId;
+  Uint8List? _replacementImage;
+  String? _replacementImageName;
+  String? _imageError;
   bool _saving = false;
 
   @override
@@ -195,17 +201,13 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
     final herdState = ref.watch(herdProvider);
     final animals =
         herdState.valueOrNull
-            ?.where(
-              (animal) =>
-                  animal.status == 'active' &&
-                  animal.imageUrl != null &&
-                  animal.imageUrl!.isNotEmpty,
-            )
+            ?.where((animal) => animal.status == 'active')
             .toList() ??
         const <Animal>[];
     final selectedAnimal = animals
         .where((animal) => animal.id == _animalId)
         .firstOrNull;
+    final selectedAnimalHasPhoto = selectedAnimal?.imageUrl?.isNotEmpty == true;
     return ListView(
       padding: const EdgeInsets.all(AppDimensions.pagePadding),
       children: [
@@ -226,8 +228,7 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
         else if (animals.isEmpty)
           const _InfoCard(
             icon: Icons.photo_camera_outlined,
-            message:
-                'Add an active pig and save its photo in Herd before posting it for buyers.',
+            message: 'Add an active pig in Herd before posting it for buyers.',
           ),
         if (!hasFarm)
           const _InfoCard(
@@ -252,7 +253,7 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
                         key: ValueKey(_animalId),
                         initialValue: _animalId,
                         decoration: const InputDecoration(
-                          labelText: 'Pig photo from farm records',
+                          labelText: 'Pig from Herd',
                         ),
                         items: [
                           for (final animal in animals)
@@ -264,11 +265,14 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
                             ),
                         ],
                         validator: (value) => value == null
-                            ? 'Select the pig whose saved photo buyers should see.'
+                            ? 'Select the pig you want to post.'
                             : null,
                         onChanged: (value) {
                           setState(() {
                             _animalId = value;
+                            _replacementImage = null;
+                            _replacementImageName = null;
+                            _imageError = null;
                             final animal = animals
                                 .where((item) => item.id == value)
                                 .firstOrNull;
@@ -276,23 +280,60 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
                           });
                         },
                       ),
-                      if (selectedAnimal?.imageUrl != null) ...[
+                      if (selectedAnimal != null) ...[
                         const SizedBox(height: 12),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            selectedAnimal!.imageUrl!,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const _InfoCard(
-                                  icon: Icons.broken_image_outlined,
-                                  message:
-                                      'The saved pig photo could not be loaded.',
+                          child: _replacementImage != null
+                              ? Image.memory(
+                                  _replacementImage!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                )
+                              : !selectedAnimalHasPhoto
+                              ? const SizedBox(
+                                  height: 150,
+                                  child: Center(
+                                    child: Icon(Icons.pets_outlined, size: 40),
+                                  ),
+                                )
+                              : Image.network(
+                                  selectedAnimal.imageUrl!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const _InfoCard(
+                                        icon: Icons.broken_image_outlined,
+                                        message:
+                                            'The saved pig photo could not be loaded.',
+                                      ),
                                 ),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: _saving ? null : _pickPigPhoto,
+                          icon: const Icon(Icons.add_a_photo_outlined),
+                          label: Text(
+                            _replacementImage != null
+                                ? 'Choose another photo'
+                                : !selectedAnimalHasPhoto
+                                ? 'Choose pig photo'
+                                : 'Replace Herd photo',
                           ),
                         ),
+                        const Text(
+                          'A new photo will replace this pig’s saved Herd photo.',
+                          textAlign: TextAlign.center,
+                        ),
+                        if (_imageError != null)
+                          Text(
+                            _imageError!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
                       ],
                       const SizedBox(height: 12),
                     ],
@@ -436,6 +477,29 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
     );
   }
 
+  Future<void> _pickPigPhoto() async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      if (bytes.length > 5 * 1024 * 1024) {
+        setState(() => _imageError = 'Pig photos must be 5 MB or smaller.');
+        return;
+      }
+      setState(() {
+        _replacementImage = bytes;
+        _replacementImageName = picked.name;
+        _imageError = null;
+      });
+    } catch (error) {
+      setState(() => _imageError = 'Could not load pig photo: $error');
+    }
+  }
+
   String? _required(String? value) =>
       value == null || value.trim().isEmpty ? 'This field is required.' : null;
 
@@ -456,8 +520,35 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final animal = ref
+        .read(herdProvider)
+        .valueOrNull
+        ?.where((item) => item.id == _animalId)
+        .firstOrNull;
+    if (animal == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select a pig from Herd before posting.')),
+      );
+      return;
+    }
+    if ((animal.imageUrl == null || animal.imageUrl!.isEmpty) &&
+        _replacementImage == null) {
+      setState(
+        () => _imageError = 'Choose a photo for this pig before posting.',
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
+      if (_replacementImage != null) {
+        await ref
+            .read(herdProvider.notifier)
+            .updateAnimal(
+              animalId: animal.id,
+              imageBytes: _replacementImage,
+              imageName: _replacementImageName,
+            );
+      }
       await ref
           .read(pigMarketplaceProvider.notifier)
           .createListing(
@@ -475,6 +566,11 @@ class _PostPigTabState extends ConsumerState<PostPigTab> {
       if (!mounted) return;
       _formKey.currentState!.reset();
       setState(() => _animalId = null);
+      setState(() {
+        _replacementImage = null;
+        _replacementImageName = null;
+        _imageError = null;
+      });
       _title.clear();
       _breed.clear();
       _quantity.text = '1';
