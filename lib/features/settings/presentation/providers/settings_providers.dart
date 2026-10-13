@@ -237,6 +237,13 @@ class PaymentSettingsNotifier extends AsyncNotifier<PaymentSettings> {
         .savePaymentSettings(updated);
     ref.invalidateSelf();
   }
+
+  Future<void> save(PaymentSettings updated) async {
+    await ref
+        .watch(settingsLocalDataSourceProvider)
+        .savePaymentSettings(updated);
+    state = AsyncData(updated);
+  }
 }
 
 final paymentSettingsProvider =
