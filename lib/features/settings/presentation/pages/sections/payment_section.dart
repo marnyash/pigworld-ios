@@ -94,7 +94,9 @@ class _PaymentSectionState extends ConsumerState<PaymentSection> {
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment settings saved on this device.')),
+          const SnackBar(
+            content: Text('Payment settings saved on this device.'),
+          ),
         );
       }
     } catch (error) {
