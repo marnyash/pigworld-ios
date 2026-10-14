@@ -118,7 +118,6 @@ class _HerdPageState extends ConsumerState<HerdPage> {
                 return matchesSearch &&
                     (statusFilter == 'all' || animal.status == statusFilter);
               }).toList();
-              final displayedHerdCount = animals.length;
               final remainingCount = registeredHerdCount > animals.length
                   ? registeredHerdCount - animals.length
                   : 0;
@@ -176,13 +175,6 @@ class _HerdPageState extends ConsumerState<HerdPage> {
                       ),
                     ),
                     const SizedBox(height: AppDimensions.spacingMedium),
-                    _HerdSummary(
-                      label: 'Details entered',
-                      value: '$displayedHerdCount',
-                      icon: Icons.pets_outlined,
-                      color: AppColors.primaryGreen,
-                    ),
-                    const SizedBox(height: AppDimensions.spacingMedium),
                     if (remainingCount > 0) ...[
                       const SizedBox(height: AppDimensions.spacingMedium),
                       _RegistrationDetailsGrid(
@@ -195,20 +187,6 @@ class _HerdPageState extends ConsumerState<HerdPage> {
                       ),
                     ],
                     const SizedBox(height: AppDimensions.spacingLarge),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          l10n.yourAnimals,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Text(
-                          '${filteredAnimals.length} ${l10n.shown}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppDimensions.spacingMedium),
                     if (filteredAnimals.isEmpty)
                       Card(
                         child: Padding(
@@ -1026,42 +1004,6 @@ class _RegistrationAnimalCard extends StatelessWidget {
   );
 }
 
-class _HerdSummary extends StatelessWidget {
-  const _HerdSummary({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(AppDimensions.spacingMedium),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(height: 12),
-          Text(value, style: Theme.of(context).textTheme.headlineMedium),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
-    ),
-  );
-}
-
 class _AnimalCard extends StatelessWidget {
   const _AnimalCard({
     required this.animal,
@@ -1077,20 +1019,53 @@ class _AnimalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final active = animal.status == 'active';
+    final imageUrl = animal.imageUrl?.trim();
+    final hasPhoto = imageUrl?.isNotEmpty == true;
+    final photoTag = 'animal-photo-${animal.id}';
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 25,
-              backgroundColor: AppColors.pigPink.withValues(alpha: 0.25),
-              backgroundImage: animal.imageUrl == null
-                  ? null
-                  : NetworkImage(animal.imageUrl!),
-              child: animal.imageUrl == null
-                  ? const Icon(Icons.pets_outlined, color: AppColors.deepGreen)
-                  : null,
+            SizedBox(
+              width: 72,
+              height: 72,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: hasPhoto
+                    ? Hero(
+                        tag: photoTag,
+                        child: Material(
+                          color: AppColors.pigPink.withValues(alpha: 0.25),
+                          child: InkWell(
+                            onTap: () =>
+                                _showAnimalPhoto(context, imageUrl, photoTag),
+                            child: Image.network(
+                              imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => const ColoredBox(
+                                color: AppColors.pigPink,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.broken_image_outlined,
+                                    color: AppColors.deepGreen,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : const ColoredBox(
+                        color: AppColors.pigPink,
+                        child: Center(
+                          child: Icon(
+                            Icons.pets_outlined,
+                            color: AppColors.deepGreen,
+                          ),
+                        ),
+                      ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1142,6 +1117,68 @@ class _AnimalCard extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showAnimalPhoto(BuildContext context, String imageUrl, String photoTag) {
+  Navigator.of(context).push<void>(
+    PageRouteBuilder<void>(
+      opaque: false,
+      transitionDuration: const Duration(milliseconds: 320),
+      reverseTransitionDuration: const Duration(milliseconds: 240),
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          _AnimalPhotoViewer(imageUrl: imageUrl, photoTag: photoTag),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+          SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+            child: child,
+          ),
+    ),
+  );
+}
+
+class _AnimalPhotoViewer extends StatelessWidget {
+  const _AnimalPhotoViewer({required this.imageUrl, required this.photoTag});
+
+  final String imageUrl;
+  final String photoTag;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      leading: IconButton(
+        tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+        icon: const Icon(Icons.close),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+    ),
+    body: Center(
+      child: Hero(
+        tag: photoTag,
+        child: InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 4,
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => const Icon(
+              Icons.broken_image_outlined,
+              color: Colors.white,
+              size: 48,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _AnimalPregnancyReportDialog extends ConsumerWidget {

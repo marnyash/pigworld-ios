@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:proj/features/auth/domain/entities/farm.dart';
 import 'package:proj/features/auth/domain/entities/session.dart';
@@ -7,9 +8,71 @@ import 'package:proj/features/auth/presentation/providers/auth_provider.dart';
 import 'package:proj/features/feed/data/feed_reminder_service.dart';
 import 'package:proj/features/feed/data/feed_schedule_local_data_source.dart';
 import 'package:proj/features/feed/presentation/providers/feed_provider.dart';
+import 'package:proj/features/settings/domain/entities/user_preferences.dart';
+import 'package:proj/features/settings/presentation/providers/settings_providers.dart';
 import 'package:proj/security/authorization/roles.dart';
 
 void main() {
+  test(
+    'feed schedule loads without initializing the notification plugin',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          feedScheduleStorageProvider.overrideWithValue(
+            _MemoryFeedScheduleStorage(),
+          ),
+          feedReminderServiceProvider.overrideWithValue(
+            _FakeFeedReminderService()..failInitialization = true,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(feedScheduleProvider.future),
+        completion(FeedScheduleLocalDataSource.defaults),
+      );
+    },
+  );
+
+  test(
+    'schedule edits persist when native reminder scheduling fails',
+    () async {
+      final storage = _MemoryFeedScheduleStorage();
+      final reminders = _FakeFeedReminderService();
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          feedScheduleStorageProvider.overrideWithValue(storage),
+          feedReminderServiceProvider.overrideWithValue(reminders),
+          userPreferencesProvider.overrideWith(_TestPreferencesNotifier.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(feedScheduleProvider.future);
+      reminders.failSync = true;
+
+      await expectLater(
+        container
+            .read(feedScheduleProvider.notifier)
+            .setReminder('midday', true),
+        throwsA(
+          isA<FeedReminderPlatformException>().having(
+            (error) => error.scheduleSaved,
+            'scheduleSaved',
+            isTrue,
+          ),
+        ),
+      );
+      expect(storage.entries[1].remindersEnabled, isTrue);
+      expect(
+        container.read(feedScheduleProvider).valueOrNull?[1].remindersEnabled,
+        isTrue,
+      );
+    },
+  );
+
   test(
     'schedule changes persist and denied reminder permission is surfaced',
     () async {
@@ -20,6 +83,7 @@ void main() {
           authProvider.overrideWith(_TestAuthNotifier.new),
           feedScheduleStorageProvider.overrideWithValue(storage),
           feedReminderServiceProvider.overrideWithValue(reminders),
+          userPreferencesProvider.overrideWith(_TestPreferencesNotifier.new),
         ],
       );
       addTearDown(container.dispose);
@@ -89,16 +153,34 @@ class _MemoryFeedScheduleStorage extends FeedScheduleLocalDataSource {
 
 class _FakeFeedReminderService extends FeedReminderService {
   bool permissionGranted = true;
+  bool failInitialization = false;
+  bool failSync = false;
   final syncedEntries = <List<FeedScheduleEntry>>[];
 
   @override
-  Future<void> initialize() async {}
+  Future<void> initialize() async {
+    if (failInitialization) {
+      throw PlatformException(code: 'notification-channel-unavailable');
+    }
+  }
 
   @override
   Future<bool> requestPermission() async => permissionGranted;
 
   @override
-  Future<void> sync(List<FeedScheduleEntry> entries) async {
+  Future<void> sync(
+    List<FeedScheduleEntry> entries, {
+    String sound = 'default',
+    bool enabled = true,
+  }) async {
+    if (failSync) {
+      throw PlatformException(code: 'notification-channel-unavailable');
+    }
     syncedEntries.add(List.of(entries));
   }
+}
+
+class _TestPreferencesNotifier extends UserPreferencesNotifier {
+  @override
+  Future<UserPreferences> build() async => UserPreferences.defaults();
 }
