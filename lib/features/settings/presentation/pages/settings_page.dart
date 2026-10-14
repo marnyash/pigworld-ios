@@ -346,6 +346,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 const Divider(height: 1),
                 _SettingsAction(
+                  icon: Icons.notifications_outlined,
+                  title: 'Notification settings',
+                  onTap: () => context.push(
+                    '${AppRoutes.settingsDetails}?tab=notifications',
+                  ),
+                ),
+                const Divider(height: 1),
+                _SettingsAction(
                   icon: Icons.support_agent_outlined,
                   title: 'Support & legal',
                   onTap: () =>

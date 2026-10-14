@@ -21,7 +21,6 @@ class AddHealthRecordDialog extends StatefulWidget {
 
 class _AddHealthRecordDialogState extends State<AddHealthRecordDialog> {
   late TextEditingController pigIdController;
-  late TextEditingController rfidController;
   late TextEditingController diagnosisController;
   late TextEditingController medicationController;
   late TextEditingController dosageController;
@@ -65,14 +64,12 @@ class _AddHealthRecordDialogState extends State<AddHealthRecordDialog> {
     selectedType = record?.type ?? widget.initialType;
     selectedStatus = record?.status ?? selectedStatus;
     pigIdController = TextEditingController();
-    rfidController = TextEditingController();
     diagnosisController = TextEditingController();
     medicationController = TextEditingController();
     dosageController = TextEditingController();
     veterinarianController = TextEditingController();
     notesController = TextEditingController();
     pigIdController.text = record?.pigId ?? '';
-    rfidController.text = record?.rfid ?? '';
     diagnosisController.text = record?.diagnosis ?? '';
     medicationController.text = record?.medication ?? '';
     dosageController.text = record?.dosage ?? '';
@@ -86,7 +83,6 @@ class _AddHealthRecordDialogState extends State<AddHealthRecordDialog> {
   @override
   void dispose() {
     pigIdController.dispose();
-    rfidController.dispose();
     diagnosisController.dispose();
     medicationController.dispose();
     dosageController.dispose();
@@ -105,7 +101,6 @@ class _AddHealthRecordDialogState extends State<AddHealthRecordDialog> {
 
     final data = {
       'pig_id': pigIdController.text,
-      'rfid': rfidController.text,
       'type': selectedType,
       'status': selectedStatus,
       'symptoms': symptoms,
@@ -162,16 +157,6 @@ class _AddHealthRecordDialogState extends State<AddHealthRecordDialog> {
               decoration: const InputDecoration(
                 labelText: 'Pig ID *',
                 hintText: 'e.g., PG-104',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: AppDimensions.spacingMedium),
-            // RFID
-            TextField(
-              controller: rfidController,
-              decoration: const InputDecoration(
-                labelText: 'RFID Tag',
-                hintText: 'e.g., RFID000104',
                 border: OutlineInputBorder(),
               ),
             ),

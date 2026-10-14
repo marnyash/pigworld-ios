@@ -7,6 +7,7 @@ import '../../../../app/theme/app_dimensions.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/components/bottom_navigation.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../breeding/presentation/providers/pregnancy_provider.dart';
 import '../../domain/entities/animal.dart';
 import '../providers/herd_provider.dart';
 
@@ -241,6 +242,13 @@ class _HerdPageState extends ConsumerState<HerdPage> {
                           onEdit: () =>
                               _showEditAnimalDialog(context, ref, animal),
                           onArchive: () => _archiveAnimal(context, ref, animal),
+                          onPregnancyReport: () => showDialog<void>(
+                            context: context,
+                            builder: (_) => _AnimalPregnancyReportDialog(
+                              animalId: animal.id,
+                              animalTag: animal.tag,
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -1059,10 +1067,12 @@ class _AnimalCard extends StatelessWidget {
     required this.animal,
     required this.onEdit,
     required this.onArchive,
+    required this.onPregnancyReport,
   });
   final Animal animal;
   final VoidCallback onEdit;
   final VoidCallback onArchive;
+  final VoidCallback onPregnancyReport;
 
   @override
   Widget build(BuildContext context) {
@@ -1101,7 +1111,6 @@ class _AnimalCard extends StatelessWidget {
                     runSpacing: 4,
                     children: [
                       _DetailChip(label: active ? 'Healthy' : animal.status),
-                      const _DetailChip(label: 'RFID not set'),
                       const _DetailChip(label: 'Pen not set'),
                     ],
                   ),
@@ -1112,11 +1121,17 @@ class _AnimalCard extends StatelessWidget {
               onSelected: (value) {
                 if (value == 'edit') onEdit();
                 if (value == 'archive') onArchive();
+                if (value == 'pregnancy-report') onPregnancyReport();
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'view', child: Text('View profile')),
-                PopupMenuItem(value: 'edit', child: Text('Edit')),
-                PopupMenuItem(
+              itemBuilder: (context) => [
+                if (animal.sex.trim().toLowerCase() == 'female')
+                  const PopupMenuItem(
+                    value: 'pregnancy-report',
+                    child: Text('Pregnancy report'),
+                  ),
+                const PopupMenuItem(value: 'view', child: Text('View profile')),
+                const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                const PopupMenuItem(
                   value: 'archive',
                   child: Text('Delete / archive'),
                 ),
@@ -1127,6 +1142,91 @@ class _AnimalCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _AnimalPregnancyReportDialog extends ConsumerWidget {
+  const _AnimalPregnancyReportDialog({
+    required this.animalId,
+    required this.animalTag,
+  });
+
+  final String animalId;
+  final String animalTag;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pregnancies = ref.watch(pregnancyProvider);
+    return AlertDialog(
+      title: Text('$animalTag pregnancy report'),
+      content: SizedBox(
+        width: 460,
+        child: pregnancies.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (error, _) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Could not load pregnancy history: $error'),
+              TextButton(
+                onPressed: () => ref.invalidate(pregnancyProvider),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+          data: (items) {
+            final records = items
+                .where((item) => item.sowId == animalId)
+                .toList();
+            if (records.isEmpty) {
+              return const Text('No pregnancy records for this pig yet.');
+            }
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final pregnancy in records)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.favorite_outline),
+                      title: Text(
+                        '${pregnancy.status.replaceAll('_', ' ')} · inseminated ${_date(pregnancy.matingDate)}',
+                      ),
+                      subtitle: Text(
+                        [
+                          'Expected farrowing ${_date(pregnancy.expectedFarrowingDate)}',
+                          if (pregnancy.actualFarrowingDate != null)
+                            'Farrowed ${_date(pregnancy.actualFarrowingDate!)}',
+                          if (pregnancy.expectedLitterSize != null)
+                            'Expected litter ${pregnancy.expectedLitterSize}',
+                          if (pregnancy.bornAlive != null)
+                            'Born alive ${pregnancy.bornAlive}',
+                          if (pregnancy.stillborn != null)
+                            'Stillborn ${pregnancy.stillborn}',
+                          if (pregnancy.mummified != null)
+                            'Mummified ${pregnancy.mummified}',
+                          if (pregnancy.weaned != null)
+                            'Weaned ${pregnancy.weaned}',
+                          if (pregnancy.notes?.trim().isNotEmpty == true)
+                            pregnancy.notes!.trim(),
+                        ].join(' · '),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  String _date(DateTime value) => '${value.day}/${value.month}/${value.year}';
 }
 
 class _DetailChip extends StatelessWidget {

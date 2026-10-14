@@ -136,7 +136,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get herdUnits => 'Herd units';
 
   @override
-  String get herdUnitsDescription => 'Kg, insemination cycles, and display units';
+  String get herdUnitsDescription => 'Kg, breeding cycles, and display units';
 
   @override
   String get timezoneAndDateFormat => 'Timezone & date format';
@@ -342,7 +342,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addPig => 'Add Pig';
 
   @override
-  String get searchAnimals => 'Search Pig ID, breed, pen, or RFID';
+  String get searchAnimals => 'Search Pig ID, breed, or pen';
 
   @override
   String get allPigs => 'All pigs';
