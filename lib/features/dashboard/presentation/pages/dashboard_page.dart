@@ -639,12 +639,7 @@ class _NotificationActionState extends State<_NotificationAction>
                   : 1,
               child: child,
             ),
-            child: Icon(
-              widget.unreadCount > 0
-                  ? Icons.notifications_active_rounded
-                  : Icons.notifications_outlined,
-              color: AppColors.primaryGreen,
-            ),
+            child: const PigWorldIcon('notification', size: 26),
           ),
           if (widget.unreadCount > 0)
             Positioned(
