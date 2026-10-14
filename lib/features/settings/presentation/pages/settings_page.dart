@@ -14,6 +14,7 @@ import 'package:proj/features/settings/data/settings_api.dart';
 import 'package:proj/features/settings/presentation/providers/settings_providers.dart';
 import 'package:proj/l10n/generated/app_localizations.dart';
 import 'package:proj/features/settings/presentation/widgets/farm_location_picker_dialog.dart';
+import 'package:proj/shared/widgets/pig_world_icon.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -244,12 +245,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               children: [
                 _SettingsAction(
                   icon: Icons.person_outline,
+                  assetName: 'profile',
                   title: l10n.changeProfileName,
                   onTap: () => _changeProfileName(session),
                 ),
                 const Divider(height: 1),
                 _SettingsAction(
                   icon: Icons.agriculture_outlined,
+                  assetName: 'farm',
                   title: l10n.changeFarmName,
                   onTap: farm == null
                       ? null
@@ -275,6 +278,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               children: [
                 _SettingsAction(
                   icon: Icons.location_on_outlined,
+                  assetName: 'farm',
                   title: l10n.farmLocation,
                   subtitle: farm?.location ?? l10n.addFarmLocation,
                   onTap: farm == null
@@ -295,6 +299,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               children: [
                 _SettingsAction(
                   icon: Icons.credit_card_outlined,
+                  assetName: 'subscribtion',
                   title: l10n.currentPlan,
                   subtitle: farm?.subscriptionPlan ?? l10n.starterPlan,
                   onTap: session?.user.role.name == 'farmOwner'
@@ -312,6 +317,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               children: [
                 _SettingsAction(
                   icon: Icons.person_outline,
+                  assetName: 'profile',
                   title: 'Profile & preferences',
                   onTap: () =>
                       context.push('${AppRoutes.settingsDetails}?tab=profile'),
@@ -326,6 +332,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const Divider(height: 1),
                 _SettingsAction(
                   icon: Icons.payment_outlined,
+                  assetName: 'finance',
                   title: 'Payment settings',
                   onTap: () =>
                       context.push('${AppRoutes.settingsDetails}?tab=payment'),
@@ -333,6 +340,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const Divider(height: 1),
                 _SettingsAction(
                   icon: Icons.backup_outlined,
+                  assetName: 'report',
                   title: 'Backup & exports',
                   onTap: () =>
                       context.push('${AppRoutes.settingsDetails}?tab=backup'),
@@ -340,6 +348,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const Divider(height: 1),
                 _SettingsAction(
                   icon: Icons.devices_outlined,
+                  assetName: 'settings',
                   title: 'Device permissions',
                   onTap: () =>
                       context.push('${AppRoutes.settingsDetails}?tab=devices'),
@@ -347,6 +356,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const Divider(height: 1),
                 _SettingsAction(
                   icon: Icons.notifications_outlined,
+                  assetName: 'notification',
                   title: 'Notification settings',
                   onTap: () => context.push(
                     '${AppRoutes.settingsDetails}?tab=notifications',
@@ -355,6 +365,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const Divider(height: 1),
                 _SettingsAction(
                   icon: Icons.support_agent_outlined,
+                  assetName: 'customer-support',
                   title: 'Support & legal',
                   onTap: () =>
                       context.push('${AppRoutes.settingsDetails}?tab=support'),
@@ -362,6 +373,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const Divider(height: 1),
                 _SettingsAction(
                   icon: Icons.group_outlined,
+                  assetName: 'farmmembers',
                   title: 'Farm member management',
                   onTap: () =>
                       context.push('${AppRoutes.settingsDetails}?tab=team'),
@@ -404,14 +416,18 @@ class _SettingsAction extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.onTap,
+    this.assetName,
   });
   final IconData icon;
   final String title;
   final String? subtitle;
   final VoidCallback? onTap;
+  final String? assetName;
   @override
   Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, color: AppColors.primaryGreen),
+    leading: assetName == null
+        ? Icon(icon, color: AppColors.primaryGreen)
+        : PigWorldIcon(assetName!, size: 24),
     title: Text(title),
     subtitle: subtitle == null ? null : Text(subtitle!),
     trailing: onTap == null ? null : const Icon(Icons.chevron_right),
