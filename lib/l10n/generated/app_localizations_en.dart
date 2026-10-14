@@ -24,7 +24,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profile => 'Profile';
 
   @override
-  String get dashboard => 'Dashboard';
+  String get dashboard => 'Home';
 
   @override
   String get health => 'Health';

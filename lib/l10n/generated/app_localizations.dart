@@ -131,7 +131,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashboard.
   ///
   /// In en, this message translates to:
-  /// **'Dashboard'**
+  /// **'Home'**
   String get dashboard;
 
   /// No description provided for @health.
