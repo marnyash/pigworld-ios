@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../security/authorization/roles.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/onboarding_header.dart';
@@ -33,6 +34,7 @@ class AccountTypePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final selectedRoles = ref.watch(onboardingProvider).roles;
     return OnboardingScaffold(
       topAction: TextButton(
@@ -95,7 +97,7 @@ class AccountTypePage extends ConsumerWidget {
                         ? AppRoutes.herdSetup
                         : AppRoutes.createAccount,
                   ),
-            child: const Text('Continue'),
+            child: Text(l10n.nextButton),
           ),
         ],
       ),

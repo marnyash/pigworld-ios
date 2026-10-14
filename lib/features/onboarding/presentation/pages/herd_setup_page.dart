@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/onboarding_header.dart';
 import '../widgets/onboarding_scaffold.dart';
@@ -240,7 +241,11 @@ class _HerdSetupPageState extends ConsumerState<HerdSetupPage> {
         const Spacer(),
         FilledButton(
           onPressed: _next,
-          child: Text(_step == 2 ? 'Continue to account' : 'Continue'),
+          child: Text(
+            _step == 2
+                ? 'Continue to account'
+                : AppLocalizations.of(context).nextButton,
+          ),
         ),
       ],
     ),

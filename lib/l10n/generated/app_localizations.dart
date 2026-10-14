@@ -638,6 +638,12 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get continueButton;
 
+  /// No description provided for @nextButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get nextButton;
+
   /// No description provided for @farmOverview.
   ///
   /// In en, this message translates to:

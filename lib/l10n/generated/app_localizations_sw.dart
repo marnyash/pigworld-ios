@@ -294,6 +294,9 @@ class AppLocalizationsSw extends AppLocalizations {
   String get continueButton => 'Endelea';
 
   @override
+  String get nextButton => 'Ifuatayo';
+
+  @override
   String get farmOverview => 'Muhtasari wa shamba';
 
   @override

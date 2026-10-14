@@ -5,7 +5,9 @@
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Pig World Smart uses your photo library to set your profile photo.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>Pig World Smart uses your location for farm context and regional reports.</string>
+		<string>Pig World Smart uses your location while you use the app to identify your region during setup and to set your farm location. Your location is not tracked in the background.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Pig World Smart uses your location while you use the app to identify your region during setup and to set your farm location. Your location is not tracked in the background.</string>
 		<key>NSUserNotificationsUsageDescription</key>
 		<string>Pig World Smart sends reminders and farm alerts.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>

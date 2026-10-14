@@ -117,7 +117,7 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
                 if (isMobile) unawaited(_requestRuntimePermissions());
                 context.go(AppRoutes.country);
               },
-              child: Text(l10n.continueButton),
+              child: Text(l10n.nextButton),
             ),
           ),
         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/country_radio_tile.dart';
@@ -57,6 +58,7 @@ class _CountryPageState extends ConsumerState<CountryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final selected = ref.watch(onboardingProvider).country;
     final countries = countryCatalog
         .where((item) => item.name.toLowerCase().contains(query.toLowerCase()))
@@ -142,7 +144,7 @@ class _CountryPageState extends ConsumerState<CountryPage> {
               onPressed: selected == null
                   ? null
                   : () => context.go(AppRoutes.accountType),
-              child: const Text('Continue'),
+              child: Text(l10n.nextButton),
             ),
           ),
         ],

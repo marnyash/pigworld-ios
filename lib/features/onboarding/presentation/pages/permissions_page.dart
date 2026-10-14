@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../security/authentication/biometric_auth.dart';
 import '../../../../app/routes/app_routes.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/onboarding_header.dart';
 import '../widgets/permission_card.dart';
@@ -12,6 +13,7 @@ class PermissionsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(onboardingProvider);
     return Scaffold(
       body: SafeArea(
@@ -93,7 +95,7 @@ class PermissionsPage extends ConsumerWidget {
             const SizedBox(height: 10),
             TextButton(
               onPressed: () => context.go(AppRoutes.language),
-              child: const Text('Continue'),
+              child: Text(l10n.nextButton),
             ),
               ],
             ),

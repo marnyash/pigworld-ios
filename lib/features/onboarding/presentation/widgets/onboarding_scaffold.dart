@@ -39,16 +39,28 @@ class OnboardingScaffold extends StatelessWidget {
         ],
       ),
     ),
-    bottomNavigationBar: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppDimensions.pagePadding,
-          10,
-          AppDimensions.pagePadding,
-          16,
-        ),
-        child: actions,
-      ),
+    bottomNavigationBar: Builder(
+      builder: (context) {
+        final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+        return AnimatedPadding(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.only(bottom: keyboardInset),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.pagePadding,
+                10,
+                AppDimensions.pagePadding,
+                16,
+              ),
+              child: actions,
+            ),
+          ),
+        );
+      },
     ),
   );
 }

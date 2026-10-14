@@ -287,6 +287,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueButton => 'Continue';
 
   @override
+  String get nextButton => 'Next';
+
+  @override
   String get farmOverview => 'Farm overview';
 
   @override
