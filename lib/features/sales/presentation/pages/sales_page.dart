@@ -48,7 +48,7 @@ class SalesPage extends ConsumerWidget {
           title: Text(l10n.sales),
           leading: IconButton(
             tooltip: l10n.openMenu,
-            icon: const Icon(Icons.menu),
+            icon: const Icon(Icons.menu_rounded),
             onPressed: () => navigationScaffoldKey.currentState?.openDrawer(),
           ),
           actions: [

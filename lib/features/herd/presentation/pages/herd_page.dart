@@ -57,7 +57,7 @@ class _HerdPageState extends ConsumerState<HerdPage> {
         title: Text(l10n.herdPageTitle),
         leading: IconButton(
           tooltip: l10n.openMenu,
-          icon: const Icon(Icons.menu),
+          icon: const Icon(Icons.menu_rounded),
           onPressed: () => navigationScaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
