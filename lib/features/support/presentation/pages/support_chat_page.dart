@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,25 +25,35 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
   Map<String, dynamic>? _conversation;
   bool _loading = true;
   bool _sending = false;
+  bool? _supportOnline;
   String? _error;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadConversation();
+    _loadPresence();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _loadConversation(silent: true);
+      _loadPresence();
+    });
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _messageController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadConversation() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  Future<void> _loadConversation({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final api = ref.read(notificationsApiProvider);
       final conversation = await api.fetchSupportConversation(widget.farmId);
@@ -50,9 +62,21 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
       if (conversation != null)
         await api.markSupportConversationRead(widget.farmId);
     } catch (error) {
-      if (mounted) _error = error.toString();
+      if (mounted && !silent) _error = error.toString();
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && !silent) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadPresence() async {
+    try {
+      final online = await ref
+          .read(notificationsApiProvider)
+          .fetchSupportPresence(widget.farmId);
+      if (mounted) setState(() => _supportOnline = online);
+    } catch (error) {
+      if (mounted)
+        setState(() => _error = 'Could not check agent availability: $error');
     }
   }
 
@@ -122,11 +146,16 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
                 subtitle: Text('${agent['role'] ?? 'Customer support'}'),
               )
             else
-              const ListTile(
-                leading: Icon(Icons.support_agent),
-                title: Text('Pig World Customer Support'),
+              ListTile(
+                leading: Icon(
+                  _supportOnline == true ? Icons.circle : Icons.circle_outlined,
+                  color: _supportOnline == true ? Colors.green : null,
+                ),
+                title: const Text('Pig World Customer Support'),
                 subtitle: Text(
-                  'A support agent will be assigned to your conversation.',
+                  _supportOnline == true
+                      ? 'An agent is online. Your message will be routed to an available person.'
+                      : 'No agents are online right now. Your message will be queued for the next available agent.',
                 ),
               ),
             const Divider(height: 1),
@@ -149,11 +178,13 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
                       ),
                     )
                   : messages.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Padding(
-                        padding: EdgeInsets.all(28),
+                        padding: const EdgeInsets.all(28),
                         child: Text(
-                          'Send a message to start a conversation with customer support.',
+                          _supportOnline == true
+                              ? 'Send a message to start a conversation with customer support.'
+                              : 'Send a message and customer support will reply when an agent is available.',
                         ),
                       ),
                     )

@@ -128,7 +128,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            _roleLabel(user?.role.name),
+                            _roleLabel(user?.role.value),
                             style: TextStyle(color: AppColors.inverseText),
                           ),
                         ),

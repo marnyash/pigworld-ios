@@ -23,12 +23,38 @@ class HerdNotifier extends AsyncNotifier<List<Animal>> {
     return ref.watch(herdApiProvider).fetchAnimals(farmId);
   }
 
+  Future<void> createSow({
+    required String tag,
+    DateTime? birthDate,
+    double? weightKg,
+    String? notes,
+  }) async {
+    final farmId = ref.read(authProvider).valueOrNull?.selectedFarm?.id;
+    if (farmId == null) throw StateError('No farm selected.');
+    await ref
+        .read(herdApiProvider)
+        .createSow(
+          farmId: farmId,
+          tag: tag,
+          birthDate: birthDate,
+          weightKg: weightKg,
+          notes: notes,
+        );
+    ref.invalidateSelf();
+    await future;
+  }
+
   Future<void> createAnimal({
     required String tag,
     required String type,
     required String sex,
+    String? status,
+    String? name,
     DateTime? birthDate,
     double? weightKg,
+    bool isPregnant = false,
+    DateTime? lastDewormedAt,
+    DateTime? lastVaccinatedAt,
     String? notes,
     Uint8List? imageBytes,
     String? imageName,
@@ -42,8 +68,13 @@ class HerdNotifier extends AsyncNotifier<List<Animal>> {
           tag: tag,
           type: type,
           sex: sex,
+          status: status,
+          name: name,
           birthDate: birthDate,
           weightKg: weightKg,
+          isPregnant: isPregnant,
+          lastDewormedAt: lastDewormedAt,
+          lastVaccinatedAt: lastVaccinatedAt,
           notes: notes,
           imageBytes: imageBytes,
           imageName: imageName,
@@ -56,29 +87,47 @@ class HerdNotifier extends AsyncNotifier<List<Animal>> {
     required String animalId,
     String? tag,
     String? status,
+    String? name,
+    String? sex,
     DateTime? birthDate,
     double? weightKg,
+    bool? isPregnant,
+    DateTime? lastDewormedAt,
+    DateTime? lastVaccinatedAt,
     String? notes,
     Uint8List? imageBytes,
     String? imageName,
   }) async {
     final farmId = ref.read(authProvider).valueOrNull?.selectedFarm?.id;
     if (farmId == null) throw StateError('No farm selected.');
-    await ref
+    final updatedAnimal = await ref
         .read(herdApiProvider)
         .updateAnimal(
           farmId: farmId,
           animalId: animalId,
           tag: tag,
           status: status,
+          name: name,
+          sex: sex,
           birthDate: birthDate,
           weightKg: weightKg,
+          isPregnant: isPregnant,
+          lastDewormedAt: lastDewormedAt,
+          lastVaccinatedAt: lastVaccinatedAt,
           notes: notes,
           imageBytes: imageBytes,
           imageName: imageName,
         );
-    ref.invalidateSelf();
-    await future;
+    final animals = [...?state.valueOrNull];
+    final animalIndex = animals.indexWhere(
+      (animal) => animal.id == updatedAnimal.id,
+    );
+    if (animalIndex == -1) {
+      animals.add(updatedAnimal);
+    } else {
+      animals[animalIndex] = updatedAnimal;
+    }
+    state = AsyncData(animals);
   }
 
   Future<void> archiveAnimal(String animalId) async {

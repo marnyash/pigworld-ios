@@ -41,7 +41,7 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.languageChangeFailed),
+          content: Text(AppLocalizations.of(context).languageChangeFailed),
         ),
       );
     }
@@ -49,7 +49,7 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final selected = ref.watch(onboardingProvider).language;
     final languages = languageCatalog
         .where((item) => item.code == 'en' || item.code == 'sw')
@@ -117,7 +117,7 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
                 if (isMobile) unawaited(_requestRuntimePermissions());
                 context.go(AppRoutes.country);
               },
-              child: Text(l10n.nextButton),
+              child: Text(l10n.continueButton),
             ),
           ),
         ],

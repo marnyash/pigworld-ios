@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_dimensions.dart';
+import '../../../../shared/widgets/pig_world_icon.dart';
+
 class LoginForm extends StatefulWidget {
   const LoginForm({
     required this.onSubmit,
@@ -44,9 +47,12 @@ class _LoginFormState extends State<LoginForm> {
         TextFormField(
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          autofillHints: const [AutofillHints.username, AutofillHints.email],
           decoration: const InputDecoration(
             labelText: 'Email or phone number',
-            prefixIcon: Icon(Icons.alternate_email),
+            hintText: 'you@example.com or phone number',
+            prefixIcon: PigWorldIcon('profile'),
           ),
           validator: (value) {
             final input = value?.trim() ?? '';
@@ -68,10 +74,12 @@ class _LoginFormState extends State<LoginForm> {
         TextFormField(
           controller: passwordController,
           keyboardType: TextInputType.text,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.password],
           obscureText: !passwordVisible,
           decoration: InputDecoration(
             labelText: 'Password',
-            prefixIcon: const Icon(Icons.lock_outline),
+            prefixIcon: const PigWorldIcon('lock'),
             suffixIcon: IconButton(
               tooltip: passwordVisible ? 'Hide password' : 'Show password',
               icon: Icon(
@@ -91,45 +99,57 @@ class _LoginFormState extends State<LoginForm> {
             return null;
           },
         ),
-        StatefulBuilder(
-          builder: (context, setState) => CheckboxListTile(
+        Material(
+          color: Theme.of(context).colorScheme.surface,
+          child: CheckboxListTile(
             value: rememberMe,
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
             onChanged: (value) => setState(() => rememberMe = value ?? false),
             title: const Text('Remember me'),
           ),
         ),
-        const SizedBox(height: 16),
-        FilledButton(
-          onPressed: isLoading || !widget.canSubmit
-              ? null
-              : () async {
-                  if (!(formKey.currentState?.validate() ?? false)) return;
-                  setState(() => isLoading = true);
-                  try {
-                    await widget.onSubmit(
-                      emailController.text.trim(),
-                      passwordController.text,
-                      rememberMe,
-                    );
-                  } catch (_) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Unable to sign in. Please try again.'),
-                        ),
+        const SizedBox(height: AppDimensions.spacingSmall),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: isLoading || !widget.canSubmit
+                ? null
+                : () async {
+                    if (!(formKey.currentState?.validate() ?? false)) return;
+                    setState(() => isLoading = true);
+                    try {
+                      await widget.onSubmit(
+                        emailController.text.trim(),
+                        passwordController.text,
+                        rememberMe,
                       );
+                    } catch (_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Unable to sign in. Please try again.',
+                            ),
+                          ),
+                        );
+                      }
+                    } finally {
+                      if (mounted) setState(() => isLoading = false);
                     }
-                  } finally {
-                    if (mounted) setState(() => isLoading = false);
-                  }
-                },
-          child: isLoading
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Sign in'),
+                  },
+            icon: isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.login_rounded),
+            label: const Text(
+              'Sign in',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
         ),
       ],
     ),

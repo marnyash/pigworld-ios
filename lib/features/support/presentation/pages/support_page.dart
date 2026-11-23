@@ -175,7 +175,7 @@ class _SupportPageState extends State<SupportPage> {
                 ),
                 const SizedBox(height: AppDimensions.spacingMedium),
                 _ContactOptionsSection(onOpenContact: _openContact),
-                const SizedBox(height: AppDimensions.spacingLarge),
+                const SizedBox(height: AppDimensions.spacingMedium),
                 _EmergencyVeterinaryCard(onCall: callVeterinary),
               ],
             ),

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../l10n/generated/app_localizations.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/onboarding_header.dart';
 import '../widgets/onboarding_scaffold.dart';
@@ -110,9 +109,9 @@ class _HerdSetupPageState extends ConsumerState<HerdSetupPage> {
                 ? 'Track your piglets'
                 : 'Add pregnancy records',
             subtitle: _step == 0
-                ? 'A quick snapshot personalizes your dashboard. Complete an individual record for every pig from Herd after signup.'
+                ? 'A quick snapshot helps Pig World Smart personalize your dashboard.'
                 : _step == 1
-                ? 'Group piglets by age here. Complete an individual record for every pig from Herd after signup.'
+                ? 'Group piglets by age. You can add these details later.'
                 : 'This optional detail helps keep your insemination picture current.',
           ),
           const SizedBox(height: 28),
@@ -241,11 +240,7 @@ class _HerdSetupPageState extends ConsumerState<HerdSetupPage> {
         const Spacer(),
         FilledButton(
           onPressed: _next,
-          child: Text(
-            _step == 2
-                ? 'Continue to account'
-                : AppLocalizations.of(context).nextButton,
-          ),
+          child: Text(_step == 2 ? 'Continue to account' : 'Continue'),
         ),
       ],
     ),

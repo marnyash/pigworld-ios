@@ -205,7 +205,7 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
                 ),
                 const SizedBox(height: AppDimensions.spacingMedium),
@@ -283,7 +283,7 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
                             ),
                             IconButton(
                               onPressed: () {
-                                _copyInviteCode(farm!.inviteCode!);
+                                _copyInviteCode(farm.inviteCode!);
                               },
                               icon: const Icon(Icons.copy_outlined),
                             ),

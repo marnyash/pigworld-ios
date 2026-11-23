@@ -15,6 +15,7 @@ import 'package:proj/features/settings/presentation/providers/settings_providers
 import 'package:proj/l10n/generated/app_localizations.dart';
 import 'package:proj/features/settings/presentation/widgets/farm_location_picker_dialog.dart';
 import 'package:proj/shared/widgets/pig_world_icon.dart';
+import 'package:proj/security/authorization/roles.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -33,11 +34,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             name: language == 'sw' ? 'Kiswahili' : 'English',
             code: language,
           );
-      if (mounted) _showMessage(AppLocalizations.of(context)!.languageChanged);
+      if (mounted) _showMessage(AppLocalizations.of(context).languageChanged);
     } catch (_) {
       if (mounted) {
         _showMessage(
-          AppLocalizations.of(context)!.languageChangeFailed,
+          AppLocalizations.of(context).languageChangeFailed,
           isError: true,
         );
       }
@@ -46,7 +47,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _changeProfileName(Session? session) async {
     if (session == null) return;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final name = await _editTextDialog(
       l10n.changeProfileNameTitle,
       l10n.profileName,
@@ -82,7 +83,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _changeFarmName(Session? session, Farm? farm) async {
     if (session == null || farm == null) return;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final name = await _editTextDialog(
       l10n.farmNameTitle,
       l10n.farmName,
@@ -155,7 +156,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _setNewPassword() async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final passwords = await showDialog<(String, String)>(
       context: context,
       builder: (_) => const _PasswordDialog(),
@@ -198,7 +199,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final preferences = ref.watch(userPreferencesProvider).valueOrNull;
     final session = ref.watch(authProvider).valueOrNull;
     final farm = session?.selectedFarm ?? session?.farms.firstOrNull;
@@ -302,7 +303,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   assetName: 'subscribtion',
                   title: l10n.currentPlan,
                   subtitle: farm?.subscriptionPlan ?? l10n.starterPlan,
-                  onTap: session?.user.role.name == 'farmOwner'
+                  onTap: session?.user.role.value == 'farmOwner'
                       ? () => context.go(AppRoutes.billing)
                       : null,
                 ),
@@ -389,21 +390,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _showLanguagePicker() => showDialog<void>(
     context: context,
     builder: (dialogContext) => SimpleDialog(
-      title: Text(AppLocalizations.of(context)!.changeLanguage),
+      title: Text(AppLocalizations.of(context).changeLanguage),
       children: [
         SimpleDialogOption(
           onPressed: () {
             Navigator.pop(dialogContext);
             _changeLanguage('en');
           },
-          child: Text(AppLocalizations.of(context)!.english),
+          child: Text(AppLocalizations.of(context).english),
         ),
         SimpleDialogOption(
           onPressed: () {
             Navigator.pop(dialogContext);
             _changeLanguage('sw');
           },
-          child: Text(AppLocalizations.of(context)!.kiswahili),
+          child: Text(AppLocalizations.of(context).kiswahili),
         ),
       ],
     ),
@@ -479,11 +480,11 @@ class _TextEditDialogState extends State<_TextEditDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: Text(AppLocalizations.of(context)!.cancel),
+        child: Text(AppLocalizations.of(context).cancel),
       ),
       FilledButton(
         onPressed: _save,
-        child: Text(AppLocalizations.of(context)!.save),
+        child: Text(AppLocalizations.of(context).save),
       ),
     ],
   );
@@ -516,7 +517,7 @@ class _PasswordDialogState extends State<_PasswordDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(AppLocalizations.of(context)!.setNewPassword),
+    title: Text(AppLocalizations.of(context).setNewPassword),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -524,21 +525,21 @@ class _PasswordDialogState extends State<_PasswordDialog> {
           controller: _currentController,
           obscureText: true,
           decoration: InputDecoration(
-            labelText: AppLocalizations.of(context)!.currentPassword,
+            labelText: AppLocalizations.of(context).currentPassword,
           ),
         ),
         TextField(
           controller: _passwordController,
           obscureText: true,
           decoration: InputDecoration(
-            labelText: AppLocalizations.of(context)!.newPassword,
+            labelText: AppLocalizations.of(context).newPassword,
           ),
         ),
         TextField(
           controller: _confirmationController,
           obscureText: true,
           decoration: InputDecoration(
-            labelText: AppLocalizations.of(context)!.confirmNewPassword,
+            labelText: AppLocalizations.of(context).confirmNewPassword,
           ),
           onSubmitted: (_) => _updatePassword(),
         ),
@@ -547,11 +548,11 @@ class _PasswordDialogState extends State<_PasswordDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: Text(AppLocalizations.of(context)!.cancel),
+        child: Text(AppLocalizations.of(context).cancel),
       ),
       FilledButton(
         onPressed: _updatePassword,
-        child: Text(AppLocalizations.of(context)!.update),
+        child: Text(AppLocalizations.of(context).update),
       ),
     ],
   );

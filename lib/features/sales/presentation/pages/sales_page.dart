@@ -15,6 +15,7 @@ import '../../../../security/authorization/roles.dart';
 import '../../../../shared/components/bottom_navigation.dart';
 import '../../data/farm_buyer.dart';
 import '../../data/farm_sale.dart';
+import 'post_pig_herd_tab.dart';
 import 'pig_marketplace_tabs.dart';
 import '../providers/farm_sales_provider.dart';
 import '../providers/pig_marketplace_provider.dart';
@@ -85,7 +86,7 @@ class SalesPage extends ConsumerWidget {
         body: TabBarView(
           children: [
             const ForBuyersTab(),
-            PostPigTab(canManage: canManage),
+            PostPigHerdTab(canManage: canManage),
             Scaffold(
               backgroundColor: Colors.transparent,
               floatingActionButton: canManage && hasFarm

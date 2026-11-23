@@ -37,6 +37,7 @@ class PigListing {
     required this.pricePerPig,
     required this.currency,
     required this.status,
+    this.animalId,
     this.ageWeeks,
     this.weightKg,
     this.location,
@@ -53,6 +54,7 @@ class PigListing {
   final double pricePerPig;
   final String currency;
   final String status;
+  final String? animalId;
   final int? ageWeeks;
   final double? weightKg;
   final String? location;
@@ -80,6 +82,7 @@ class PigListing {
     pricePerPig: double.tryParse('${json['price_per_pig'] ?? 0}') ?? 0,
     currency: '${json['currency'] ?? 'KES'}',
     status: '${json['status'] ?? 'available'}',
+    animalId: json['animal_id']?.toString(),
     ageWeeks: (json['age_weeks'] as num?)?.toInt(),
     weightKg: json['weight_kg'] == null
         ? null

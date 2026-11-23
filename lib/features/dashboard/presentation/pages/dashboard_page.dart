@@ -218,9 +218,17 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ),
         title: Text(farmName, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
-          _NotificationAction(
-            unreadCount: unreadNotificationCount,
+          IconButton(
             tooltip: l10n.openNotifications,
+            icon: Badge(
+              isLabelVisible: unreadNotificationCount > 0,
+              label: Text(
+                unreadNotificationCount > 99
+                    ? '99+'
+                    : '$unreadNotificationCount',
+              ),
+              child: const PigWorldIcon('notification'),
+            ),
             onPressed: () => context.go(AppRoutes.notifications),
           ),
         ],
@@ -571,102 +579,6 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _NotificationAction extends StatefulWidget {
-  const _NotificationAction({
-    required this.unreadCount,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final int unreadCount;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  State<_NotificationAction> createState() => _NotificationActionState();
-}
-
-class _NotificationActionState extends State<_NotificationAction>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    if (widget.unreadCount > 0) _pulseController.repeat(reverse: true);
-  }
-
-  @override
-  void didUpdateWidget(covariant _NotificationAction oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.unreadCount == 0 && widget.unreadCount > 0) {
-      _pulseController.repeat(reverse: true);
-    } else if (oldWidget.unreadCount > 0 && widget.unreadCount == 0) {
-      _pulseController
-        ..stop()
-        ..value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: widget.tooltip,
-    onPressed: widget.onPressed,
-    icon: SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) => Transform.scale(
-              scale: widget.unreadCount > 0
-                  ? 1 + _pulseController.value * 0.14
-                  : 1,
-              child: child,
-            ),
-            child: const PigWorldIcon('notification', size: 26),
-          ),
-          if (widget.unreadCount > 0)
-            Positioned(
-              top: 2,
-              right: 0,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: const BoxDecoration(
-                  color: AppColors.danger,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  widget.unreadCount > 99 ? '99+' : '${widget.unreadCount}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    ),
-  );
 }
 
 class _NotificationBanner extends StatelessWidget {

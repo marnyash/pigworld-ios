@@ -66,7 +66,7 @@ class UserManagementSection extends ConsumerWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text('Email: ${member.email}'),
-                                      Text('Role: ${member.role.name}'),
+                                      Text('Role: ${member.role.value}'),
                                       if (member.identityNumber.isNotEmpty)
                                         Text(
                                           'Identity number: ${member.identityNumber}',

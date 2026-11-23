@@ -25,28 +25,63 @@ class HerdApi {
     }
   }
 
+  Future<Animal> createSow({
+    required String farmId,
+    required String tag,
+    DateTime? birthDate,
+    double? weightKg,
+    String? notes,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/farms/$farmId/animals',
+        data: {
+          'tag': tag,
+          'type': 'sow',
+          'sex': 'female',
+          'birth_date': ?birthDate?.toIso8601String().split('T').first,
+          'weight_kg': ?weightKg,
+          if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        },
+      );
+      return _parseAnimal(response.data?['data'] as Map<String, dynamic>);
+    } on DioException catch (error) {
+      throw ErrorHandler.from(error);
+    }
+  }
+
   Future<Animal> createAnimal({
     required String farmId,
     required String tag,
     required String type,
     required String sex,
+    String? status,
+    String? name,
     DateTime? birthDate,
     double? weightKg,
     bool isPregnant = false,
+    DateTime? lastDewormedAt,
+    DateTime? lastVaccinatedAt,
     String? notes,
     Uint8List? imageBytes,
     String? imageName,
   }) async {
     try {
-      final trimmedNotes = notes?.trim();
       final data = {
         'tag': tag,
         'type': type,
         'sex': sex,
+        'status': ?status,
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
         'birth_date': ?birthDate?.toIso8601String().split('T').first,
-        'weight_kg': ?weightKg,
         'is_pregnant': isPregnant,
-        'notes': ?(trimmedNotes?.isNotEmpty == true ? trimmedNotes : null),
+        'last_dewormed_at': lastDewormedAt?.toIso8601String().split('T').first,
+        'last_vaccinated_at': lastVaccinatedAt
+            ?.toIso8601String()
+            .split('T')
+            .first,
+        'weight_kg': ?weightKg,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
       };
       final response = imageBytes == null
           ? await _dio.post<Map<String, dynamic>>(
@@ -90,9 +125,13 @@ class HerdApi {
     required String animalId,
     String? tag,
     String? status,
+    String? name,
+    String? sex,
     DateTime? birthDate,
     double? weightKg,
     bool? isPregnant,
+    DateTime? lastDewormedAt,
+    DateTime? lastVaccinatedAt,
     String? notes,
     Uint8List? imageBytes,
     String? imageName,
@@ -100,10 +139,17 @@ class HerdApi {
     try {
       final data = {
         if (tag != null) 'tag': tag.trim(),
-        if (status != null) 'status': status,
+        'status': ?status,
+        if (name != null) 'name': name.trim().isEmpty ? null : name.trim(),
+        'sex': ?sex,
         'birth_date': birthDate?.toIso8601String().split('T').first,
         'weight_kg': weightKg,
         'is_pregnant': ?isPregnant,
+        'last_dewormed_at': lastDewormedAt?.toIso8601String().split('T').first,
+        'last_vaccinated_at': lastVaccinatedAt
+            ?.toIso8601String()
+            .split('T')
+            .first,
         'notes': notes?.trim(),
       };
       final response = imageBytes == null
@@ -115,7 +161,8 @@ class HerdApi {
               '/farms/$farmId/animals/$animalId',
               data: FormData.fromMap({
                 ...data,
-                if (isPregnant != null) 'is_pregnant': isPregnant ? '1' : '0',
+                if (isPregnant case final bool pregnant)
+                  'is_pregnant': pregnant ? '1' : '0',
                 '_method': 'PATCH',
                 'image': MultipartFile.fromBytes(
                   imageBytes,
