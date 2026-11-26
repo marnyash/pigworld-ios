@@ -61,4 +61,30 @@ void main() {
       expect(find.text('Verify and sign in'), findsOneWidget);
     },
   );
+
+  testWidgets('OTP field exposes the platform one-time-code autofill hint', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: OtpVerificationPage(
+            challengeId: 'challenge-test',
+            destination: 'u***@pigworld.com',
+            rememberMe: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).autofillHints,
+      const [AutofillHints.oneTimeCode],
+    );
+
+    final codeField = find.byKey(const ValueKey('login-otp-code'));
+    await tester.enterText(codeField, '12ab3456');
+    await tester.pump();
+    expect(find.text('123456'), findsOneWidget);
+  });
 }
