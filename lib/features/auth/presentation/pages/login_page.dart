@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/errors/error_handler.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimensions.dart';
 import '../../../../app/routes/app_routes.dart';
@@ -113,6 +114,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               '${AppRoutes.otpVerification}?challengeId=${Uri.encodeComponent(challenge.id)}&destination=${Uri.encodeComponent(challenge.destination)}&rememberMe=$rememberMe',
                             );
                           }
+                        } on ApiException catch (error) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(error.message)),
+                            );
+                          }
                         } catch (_) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -157,20 +164,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: AppDimensions.spacingSmall),
                     OutlinedButton.icon(
-                      onPressed: !_agreementAccepted
-                          ? null
-                          : defaultTargetPlatform == TargetPlatform.iOS
-                          ? _signInWithApple
-                          : _signInWithGoogle,
-                      icon: defaultTargetPlatform == TargetPlatform.iOS
-                          ? const Icon(Icons.apple)
-                          : const PigWorldIcon('google', size: 20),
-                      label: Text(
-                        defaultTargetPlatform == TargetPlatform.iOS
-                            ? 'Continue with Apple'
-                            : 'Continue with Google',
-                      ),
+                      onPressed: !_agreementAccepted ? null : _signInWithGoogle,
+                      icon: const PigWorldIcon('google', size: 20),
+                      label: const Text('Continue with Google'),
                     ),
+                    if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                      const SizedBox(height: AppDimensions.spacingSmall),
+                      OutlinedButton.icon(
+                        onPressed: !_agreementAccepted
+                            ? null
+                            : _signInWithApple,
+                        icon: const Icon(Icons.apple),
+                        label: const Text('Continue with Apple'),
+                      ),
+                    ],
                     Align(
                       alignment: Alignment.center,
                       child: TextButton(

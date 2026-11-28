@@ -82,6 +82,23 @@ class _PaymentMethodPageState extends ConsumerState<PaymentMethodPage> {
         (session?.farms.isNotEmpty ?? false ? session!.farms.first : null);
     final phone = _normalizeKenyanPhone(_phoneController.text);
 
+    if (selectedFarm == null || selectedFarm.id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a farm before starting the payment.'),
+        ),
+      );
+      return;
+    }
+
+    if (selectedFarm.motherPigCount <= 0) {
+      context.go(
+        AppRoutes.herdSetup,
+        extra: {'selected_plan': widget.selectedPlan},
+      );
+      return;
+    }
+
     if (_selectedMethod != 'M-Pesa') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -96,15 +113,6 @@ class _PaymentMethodPageState extends ConsumerState<PaymentMethodPage> {
     if (phone == null || !RegExp(r'^254[17]\d{8}$').hasMatch(phone)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid Kenyan M-Pesa number.')),
-      );
-      return;
-    }
-
-    if (selectedFarm == null || selectedFarm.id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a farm before starting the payment.'),
-        ),
       );
       return;
     }
@@ -233,7 +241,7 @@ class _PaymentMethodPageState extends ConsumerState<PaymentMethodPage> {
               if ((ref.watch(authProvider).valueOrNull?.farms ?? const <Farm>[])
                   .isNotEmpty) ...[
                 DropdownButtonFormField<Farm>(
-                  value: _selectedFarm,
+                  initialValue: _selectedFarm,
                   decoration: const InputDecoration(
                     labelText: 'Farm',
                     prefixIcon: Icon(Icons.agriculture_outlined),

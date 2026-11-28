@@ -19,9 +19,11 @@ import '../../domain/usecases/login_with_apple.dart';
 import '../../domain/usecases/logout.dart';
 import '../../domain/usecases/refresh_session.dart';
 import '../../domain/usecases/register.dart';
+import '../../domain/usecases/reset_password.dart';
 import '../../domain/usecases/resend_login_otp.dart';
 import '../../domain/usecases/select_farm.dart';
 import '../../domain/usecases/verify_login_otp.dart';
+import '../../domain/usecases/verify_password_reset_code.dart';
 import 'auth_provider.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
@@ -98,6 +100,12 @@ final selectFarmUseCaseProvider = Provider(
 );
 final forgotPasswordUseCaseProvider = Provider(
   (ref) => ForgotPassword(ref.watch(authRepositoryProvider)),
+);
+final verifyPasswordResetCodeUseCaseProvider = Provider(
+  (ref) => VerifyPasswordResetCode(ref.watch(authRepositoryProvider)),
+);
+final resetPasswordUseCaseProvider = Provider(
+  (ref) => ResetPassword(ref.watch(authRepositoryProvider)),
 );
 
 /// Restores a persisted session only after the server accepts and rotates its refresh token.

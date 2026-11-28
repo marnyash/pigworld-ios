@@ -146,6 +146,19 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> forgotPassword(String email) => remote.forgotPassword(email);
 
+  @override
+  Future<void> verifyPasswordResetCode({
+    required String email,
+    required String code,
+  }) => remote.verifyPasswordResetCode(email: email, code: code);
+
+  @override
+  Future<void> resetPassword({
+    required String token,
+    required String email,
+    required String password,
+  }) => remote.resetPassword(token: token, email: email, password: password);
+
   Future<Session> _withPreferredFarm(
     Session session, {
     String? preferredFarmId,

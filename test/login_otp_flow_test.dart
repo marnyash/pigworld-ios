@@ -25,16 +25,16 @@ void main() {
     );
 
     final signIn = find.widgetWithText(FilledButton, 'Sign in');
-    final agreement = find.byKey(
-      const ValueKey('login-agreement-checkbox'),
-    );
+    final agreement = find.byKey(const ValueKey('login-agreement-checkbox'));
     expect(tester.widget<FilledButton>(signIn).onPressed, isNull);
     expect(find.text('User Agreement'), findsOneWidget);
     expect(find.text('Privacy Policy'), findsOneWidget);
 
     await tester.ensureVisible(agreement);
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: agreement, matching: find.byType(Checkbox)));
+    await tester.tap(
+      find.descendant(of: agreement, matching: find.byType(Checkbox)),
+    );
     await tester.pumpAndSettle();
 
     expect(tester.widget<CheckboxListTile>(agreement).value, isTrue);
@@ -61,4 +61,33 @@ void main() {
       expect(find.text('Verify and sign in'), findsOneWidget);
     },
   );
+
+  testWidgets('OTP field exposes the platform one-time-code autofill hint', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: OtpVerificationPage(
+            challengeId: 'challenge-test',
+            destination: 'u***@pigworld.com',
+            rememberMe: false,
+          ),
+        ),
+      ),
+    );
+
+    final codeField = find.byKey(const ValueKey('login-otp-code'));
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).autofillHints,
+      const [AutofillHints.oneTimeCode],
+    );
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).autofocus,
+      isTrue,
+    );
+    await tester.enterText(codeField, '12ab3456');
+    await tester.pump();
+    expect(find.text('123456'), findsOneWidget);
+  });
 }
